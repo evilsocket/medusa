@@ -134,10 +134,8 @@ pub async fn handle(
 						Err(e) => {
 							error!("failed to send output to {}; err = {:?}", address, e);
 							ok = false;
-							break;
 						}
 					}
-					break;
 				}
 			} else {
 				match socket
@@ -154,7 +152,6 @@ pub async fn handle(
 					Err(e) => {
 						error!("failed to send output to {}; err = {:?}", address, e);
 						ok = false;
-						break;
 					}
 				}
 			}

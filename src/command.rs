@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use log::{debug, info};
+use log::debug;
 use regex::Regex;
 use serde::Deserialize;
 
