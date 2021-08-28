@@ -13,9 +13,9 @@ No precompiled binaries for the time being ...
 First you need to create at least one service file. Let's begin by defining a simple SSH honeypot that accepts any combination of user and password:
 
 	mkdir -p /path/to/services.d/
-	touch /path/to/services.d/example-ssh.yaml
+	touch /path/to/services.d/example-ssh.yml
 
-Open `/path/to/services.d/example-ssh.yaml` with your favorite editor and paste these contents:
+Open `/path/to/services.d/example-ssh.yml` with your favorite editor and paste these contents:
 
 ```yaml
 proto: ssh
