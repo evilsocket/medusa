@@ -105,6 +105,8 @@ You can create and start a jail container with:
 
 This will execute any command that the client is sending on the `medusajail` container and it will transparently pass the output to the client.
 
+Configuring a realistic docker container is beyond the purpose of this document, you can find useful images [here](https://github.com/plajjan/vrnetlab).
+
 ## Protocols
 
 SSH server emulation (with docker jail):
