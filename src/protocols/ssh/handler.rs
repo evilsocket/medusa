@@ -123,6 +123,31 @@ impl server::Handler for ClientHandler {
 		self.finished_auth(Auth::Accept)
 	}
 
+	fn auth_publickey(
+		mut self,
+		user: &str,
+		public_key: &thrussh_keys::key::PublicKey,
+	) -> Self::FutureAuth {
+		self.log.auth(
+			user.to_string(),
+			Some(format!("public key: {}", public_key.fingerprint())),
+		);
+		self.finished_auth(Auth::Accept)
+	}
+
+	fn auth_keyboard_interactive(
+		mut self,
+		user: &str,
+		submethods: &str,
+		_: Option<thrussh::server::Response>,
+	) -> Self::FutureAuth {
+		self.log.auth(
+			user.to_string(),
+			Some(format!("submethods: {}", submethods)),
+		);
+		self.finished_auth(Auth::Accept)
+	}
+
 	fn channel_open_x11(
 		mut self,
 		_channel: ChannelId,

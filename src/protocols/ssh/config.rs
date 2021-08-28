@@ -72,7 +72,11 @@ impl Config {
 		}
 
 		ssh_config.server_id = self.server_id.to_owned();
-		ssh_config.methods = thrussh::MethodSet::PASSWORD | thrussh::MethodSet::NONE;
+		ssh_config.methods = thrussh::MethodSet::NONE
+			| thrussh::MethodSet::PASSWORD
+			| thrussh::MethodSet::PUBLICKEY
+			| thrussh::MethodSet::HOSTBASED
+			| thrussh::MethodSet::KEYBOARD_INTERACTIVE;
 		ssh_config.connection_timeout = Some(Duration::from_secs(self.timeout));
 
 		Ok(ssh_config)
