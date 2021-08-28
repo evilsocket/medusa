@@ -27,8 +27,7 @@ mod config;
 mod protocols;
 mod record;
 
-#[tokio::main]
-async fn main() {
+fn setup() -> Options {
     let mut options: Options = Options::parse();
 
     env_logger::Builder::from_env(
@@ -55,11 +54,17 @@ async fn main() {
         .unwrap()
         .to_owned();
 
-    debug!("loading services from {} ...", &options.services);
+    options
+}
+
+fn load_services(from: &str, records: &str) -> config::Config {
+    debug!("loading services from {} ...", from);
+
     let mut config = config::Config::new();
 
-    config.records.path = options.records;
-    for entry in glob(&format!("{}/**/*.yml", options.services)).unwrap() {
+    config.records.path = records.to_string();
+
+    for entry in glob(&format!("{}/**/*.yml", from)).unwrap() {
         match entry {
             Ok(path) => {
                 debug!("loading {}", path.display());
@@ -67,7 +72,7 @@ async fn main() {
                 let service_name = path
                     .to_str()
                     .unwrap()
-                    .replace(&options.services, "")
+                    .replace(from, "")
                     .trim_start_matches('/')
                     .trim_end_matches(".yml")
                     .replace("/", "-")
@@ -82,6 +87,14 @@ async fn main() {
             Err(e) => error!("{:?}", e),
         }
     }
+
+    config
+}
+
+#[tokio::main]
+async fn main() {
+    let options = setup();
+    let config = load_services(&options.services, &options.records);
 
     let mut services = HashMap::new();
     let mut futures = Vec::new();
