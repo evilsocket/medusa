@@ -1,7 +1,8 @@
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
-use log::debug;
+use log::{debug, warn};
 use thrussh::server::{self, Config as SSHConfig};
 
 use crate::{
@@ -59,11 +60,19 @@ impl Protocol for Server {
 impl server::Server for Server {
 	type Handler = handler::ClientHandler;
 
-	fn new(&mut self, address: Option<std::net::SocketAddr>) -> handler::ClientHandler {
+	fn new(&mut self, address: Option<SocketAddr>) -> handler::ClientHandler {
+		let address = match address {
+			Some(addr) => addr,
+			None => {
+				warn!("ssh address is none");
+				SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 0)
+			}
+		};
+
 		handler::ClientHandler::new(
 			self.service_name.clone(),
 			self.service.clone(),
-			address.unwrap(),
+			address,
 			self.config.clone(),
 			self.main_config.clone(),
 		)
