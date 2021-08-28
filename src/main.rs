@@ -104,19 +104,23 @@ async fn main() {
         }
     }
 
-    for (name, (service, service_config)) in &services {
-        info!(
-            "starting {} on {} ({}) ...",
-            name, service_config.address, service_config.proto
-        );
-        futures.push(service.run());
-    }
-
-    if futures.len() > 1 {
-        info!("all services started");
+    if services.is_empty() {
+        error!("no services found in {}", options.services);
     } else {
-        info!("service started");
-    }
+        for (name, (service, service_config)) in &services {
+            info!(
+                "starting {} on {} ({}) ...",
+                name, service_config.address, service_config.proto
+            );
+            futures.push(service.run());
+        }
 
-    future::join_all(futures).await;
+        if futures.len() > 1 {
+            info!("all services started");
+        } else {
+            info!("service started");
+        }
+
+        future::join_all(futures).await;
+    }
 }
