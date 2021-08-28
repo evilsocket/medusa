@@ -1,4 +1,4 @@
-Medusa is a fast and secure multi protocol honeypot that can mimic realistic devices running `ssh`, `telnet`, `http` or other `tcp` servers. 
+Medusa is a fast and secure multi protocol honeypot that can mimic realistic devices running `ssh`, `telnet`, `http` or other `tcp` and `udp` servers. 
 
 **Work in progress.**
 
@@ -176,6 +176,17 @@ banner: |
   Firmware: 1
   Hostname: ASBN-BB-RT01
   Vendor: MikroTik
+```
+
+And UDP servers as well:
+
+```yaml
+proto: udp
+address: '0.0.0.0:5353'
+banner: |
+  dnsmasq-2.73
+  Recursion: enabled
+  Resolver name: X4200
 ```
 
 ## License

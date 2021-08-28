@@ -1,11 +1,14 @@
 use std::net::SocketAddr;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use log::{error, info};
 
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-use crate::{config::Config as MainConfig, record};
+use crate::{
+	config::{Config as MainConfig, Service},
+	record,
+};
 
 use super::config::Config;
 
@@ -13,6 +16,7 @@ pub async fn handle(
 	mut socket: tokio::net::TcpStream,
 	address: SocketAddr,
 	service_name: String,
+	service: Arc<Mutex<Service>>,
 	config: Arc<Config>,
 	main_config: Arc<MainConfig>,
 ) {
@@ -47,7 +51,22 @@ pub async fn handle(
 				}
 			};
 
-			log.raw(buf[0..n].to_vec());
+			log.raw(buf[..n].to_vec());
+			let command = String::from_utf8_lossy(&buf[..n]);
+
+			let mut output: Option<String> = None;
+			for parser in &mut service.lock().unwrap().commands {
+				if let Some(out) = parser.parse(&command) {
+					output = Some(out);
+					break;
+				}
+			}
+
+			if let Some(output) = output {
+				if let Err(e) = socket.write_all(output.as_bytes()).await {
+					error!("failed to send response to {}; err = {:?}", address, e);
+				}
+			}
 		}
 	}
 

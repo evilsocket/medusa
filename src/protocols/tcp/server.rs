@@ -53,6 +53,7 @@ impl Protocol for Server {
 				socket,
 				addr,
 				self.service_name.clone(),
+				self.service.clone(),
 				self.config.clone(),
 				self.main_config.clone(),
 			));

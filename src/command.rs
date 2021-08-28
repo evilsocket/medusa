@@ -58,6 +58,8 @@ impl Command {
 				data += String::from_utf8_lossy(&output.stderr).trim();
 				data = data.replace("\n", "\r\n");
 
+				debug!("{}", &data);
+
 				self.cache.insert(handler, data.clone());
 				return Some(data);
 			}

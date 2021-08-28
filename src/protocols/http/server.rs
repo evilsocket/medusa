@@ -45,7 +45,7 @@ impl Server {
 #[async_trait]
 impl Protocol for Server {
 	async fn run(&self) {
-		debug!("starting telnet on {} ...", &self.config.address);
+		debug!("starting http on {} ...", &self.config.address);
 
 		let listener = TcpListener::bind(&self.config.address).await.unwrap();
 		while let Ok((socket, addr)) = listener.accept().await {

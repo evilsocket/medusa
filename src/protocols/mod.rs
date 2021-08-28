@@ -8,6 +8,7 @@ pub mod http;
 pub mod ssh;
 pub mod tcp;
 pub mod telnet;
+pub mod udp;
 
 pub type Error = String;
 
@@ -24,6 +25,10 @@ pub fn factory(
 ) -> Result<Box<dyn Protocol>, Error> {
 	match protocol_name {
 		"tcp" => match tcp::server::Server::new(service_name.to_owned(), service, config) {
+			Ok(ssh) => Ok(Box::new(ssh)),
+			Err(e) => Err(e),
+		},
+		"udp" => match udp::server::Server::new(service_name.to_owned(), service, config) {
 			Ok(ssh) => Ok(Box::new(ssh)),
 			Err(e) => Err(e),
 		},
