@@ -82,7 +82,7 @@ commands:
 
 ### Docker Jail
 
-Another useful handler is `@shell`. As the name suggests it executes any shell command it receives as an argument, therefore we could create a "jailed" `ssh` honeypot by doing:
+Another useful handler is `@docker`. As the name suggests it executes any shell command it receives as an argument inside a docker container, therefore we could create a "jailed" `ssh` honeypot by doing:
 
 ```yaml
 proto: ssh
@@ -95,7 +95,7 @@ commands:
   - parser: '^exit(\s.+)?$'
     handler: '@exit'
   - parser: '^(.+)$'
-    handler: '@shell docker exec medusajail {$1}'
+    handler: '@docker medusajail {$1}'
 ```
 
 And:
@@ -119,7 +119,7 @@ commands:
   - parser: '^exit(\s.+)?$'
     handler: '@exit'
   - parser: '^(.+)$'
-    handler: '@shell docker exec medusajail {$1}'
+    handler: '@docker medusajail {$1}'
 ```
 
 Telnet server emulation (with docker jail):
@@ -136,7 +136,7 @@ commands:
   - parser: '^exit(\s.+)?$'
     handler: '@exit'
   - parser: '^(.+)$'
-    handler: '@shell docker exec medusajail {$1}'
+    handler: '@docker medusajail {$1}'
 ```	
 
 HTTP server emulation with custom headers:

@@ -36,13 +36,19 @@ impl Command {
 				debug!("'{}' from cache: {}", &handler, out.len());
 				// return from cache
 				return Some(out.to_string());
-			} else if handler.starts_with("@shell ") {
-				// run as a shell command
-				let args = vec!["-c", handler.trim_start_matches("@shell ")];
+			} else if handler.starts_with("@docker ") {
+				let mut iter = handler.splitn(3, ' ');
+				let (_, image, command) = (
+					iter.next().unwrap(),
+					iter.next().unwrap(),
+					iter.next().unwrap(),
+				);
 
-				debug!("sh {:?}", &args);
+				let args = vec!["exec", image, "sh", "-c", command];
 
-				let output = std::process::Command::new("/bin/sh")
+				debug!("docker {:?}", args);
+
+				let output = std::process::Command::new("docker")
 					.args(&args)
 					.output()
 					.unwrap();
