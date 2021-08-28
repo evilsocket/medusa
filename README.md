@@ -4,9 +4,18 @@ Medusa is a fast and secure multi protocol honeypot that can mimic realistic dev
 
 ## Building
 
-No precompiled binaries for the time being ...
+No precompiled binaries for the time being.
+
+You can build from sources if you have Rust installed in your system:
 
 	cargo build 
+
+Or using Docker:
+
+  docker build -t medusa .
+  docker run -v /path/to/services.d:/etc/medusa/services.d -v /path/to/records:/var/lib/medusa/records medusa
+
+Depending on your services configuration this last command line might need additional parameters to open TCP and UDP ports.
 
 ## Usage
 
