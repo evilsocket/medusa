@@ -38,27 +38,22 @@ impl Command {
 				return Some(out.to_string());
 			} else if handler.starts_with("@shell ") {
 				// run as a shell command
-				let args: Vec<_> = handler.trim_start_matches("@shell ").split(' ').collect();
+				let args = vec!["-c", handler.trim_start_matches("@shell ")];
 
-				debug!("args={:?}", args);
-				let output = std::process::Command::new(args[0])
-					.args(&args[1..])
+				debug!("sh {:?}", &args);
+
+				let output = std::process::Command::new("/bin/sh")
+					.args(&args)
 					.output()
 					.unwrap();
 
-				// cache and return stderr if not empty
-				let err = String::from_utf8_lossy(&output.stderr).trim().to_owned();
-				if !err.is_empty() {
-					self.cache.insert(handler, err.clone());
-					return Some(err);
-				}
+				let mut data = String::from_utf8_lossy(&output.stderr).trim().to_owned();
 
-				// cache and return stdolut
-				let output = String::from_utf8_lossy(&output.stdout).trim().to_owned();
-				let output = output.replace("\n", "\r\n");
+				data += String::from_utf8_lossy(&output.stdout).trim();
+				data = data.replace("\n", "\r\n");
 
-				self.cache.insert(handler, output.clone());
-				return Some(output);
+				self.cache.insert(handler, data.clone());
+				return Some(data);
 			}
 
 			return Some(handler);
