@@ -53,9 +53,9 @@ impl Command {
 					.output()
 					.unwrap();
 
-				let mut data = String::from_utf8_lossy(&output.stderr).trim().to_owned();
+				let mut data = String::from_utf8_lossy(&output.stdout).to_string();
 
-				data += String::from_utf8_lossy(&output.stdout).trim();
+				data += String::from_utf8_lossy(&output.stderr).trim();
 				data = data.replace("\n", "\r\n");
 
 				self.cache.insert(handler, data.clone());
