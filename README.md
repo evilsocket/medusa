@@ -98,9 +98,11 @@ commands:
     handler: '@docker medusajail {$1}'
 ```
 
-And:
+You can create and start a jail container with:
 
-	docker container run --name medusajail nginx # feel free to pick any image
+
+	docker container create --name medusajail busybox tail -f /dev/null # feel free to pick any image
+	docker start medusajail
 
 This will execute any command that the client is sending on the `medusajail` container and it will transparently pass the output to the client.
 
