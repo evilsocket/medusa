@@ -12,7 +12,7 @@ use crate::{
 
 use super::config::Config;
 
-fn response(code: u32, message: &str, headers: &Vec<String>, data: Option<String>) -> String {
+fn response(code: u32, message: &str, headers: &[String], data: Option<String>) -> String {
 	let mut resp = format!("HTTP/1.0 {} {}\r\nConnection: close\r\n", code, message);
 
 	for header in headers {
@@ -21,7 +21,7 @@ fn response(code: u32, message: &str, headers: &Vec<String>, data: Option<String
 
 	if let Some(data) = data {
 		resp += &format!("Content-length: {}\r\n", data.len());
-		resp += &format!("\r\n");
+		resp += "\r\n";
 		resp += &data;
 	} else {
 		resp += "Content-length: 0\r\n\r\n";
