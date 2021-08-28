@@ -12,8 +12,8 @@ You can build from sources if you have Rust installed in your system:
 
 Or using Docker:
 
-  docker build -t medusa .
-  docker run -v /path/to/services.d:/etc/medusa/services.d -v /path/to/records:/var/lib/medusa/records medusa
+    docker build -t medusa .
+    docker run -v /path/to/services.d:/etc/medusa/services.d -v /path/to/records:/var/lib/medusa/records medusa
 
 Depending on your services configuration this last command line might need additional parameters to open TCP and UDP ports.
 
