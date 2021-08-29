@@ -5,7 +5,7 @@ use regex::Regex;
 
 use crate::{command::Command, config::Service};
 
-const HTTP_IGNORE_HEADERS: &'static [&str] = &["connection", "content-length", "date"];
+const HTTP_IGNORE_HEADERS: &[&str] = &["connection", "content-length", "date"];
 
 lazy_static! {
 	static ref HTTP_HEADERS_PARSER: Regex = Regex::new(r"(.+): (.+)").unwrap();
@@ -17,7 +17,7 @@ pub fn ssh(port_num: u64, data: &str) -> String {
 		"@exit".to_owned(),
 	)];
 
-	let server_id = data.splitn(2, '\n').nth(0).unwrap();
+	let server_id = data.splitn(2, '\n').next().unwrap();
 
 	let mut config: HashMap<String, serde_yaml::Value> = HashMap::new();
 
