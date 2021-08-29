@@ -1,7 +1,7 @@
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 
-use log::{error, info};
+use log::{debug, error, info};
 
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
@@ -11,6 +11,101 @@ use crate::{
 };
 
 use super::config::Config;
+
+async fn login_prompt(
+	config: Arc<Config>,
+	socket: &mut tokio::net::TcpStream,
+	address: SocketAddr,
+) -> Result<Option<String>, String> {
+	if !config.login_prompt.is_empty() {
+		match socket.write_all(config.login_prompt.as_bytes()).await {
+			Ok(_) => {}
+			Err(e) => {
+				return Err(format!(
+					"failed to send login prompt to {}; err = {:?}",
+					address, e
+				));
+			}
+		}
+
+		let mut buf = [0; 1024];
+		let n = match socket.read(&mut buf).await {
+			Ok(n) if n == 0 => return Ok(None),
+			Ok(n) => n,
+			Err(e) => {
+				return Err(format!(
+					"failed to read login from {}; err = {:?}",
+					address, e
+				));
+			}
+		};
+
+		return Ok(Some(String::from_utf8_lossy(&buf[0..n]).trim().to_string()));
+	}
+
+	Ok(None)
+}
+
+async fn password_prompt(
+	config: Arc<Config>,
+	socket: &mut tokio::net::TcpStream,
+	address: SocketAddr,
+) -> Result<Option<String>, String> {
+	if !config.password_prompt.is_empty() {
+		match socket.write_all(config.password_prompt.as_bytes()).await {
+			Ok(_) => {}
+			Err(e) => {
+				return Err(format!(
+					"failed to send password prompt to {}; err = {:?}",
+					address, e
+				));
+			}
+		}
+
+		let mut buf = [0; 1024];
+		let n = match socket.read(&mut buf).await {
+			Ok(n) if n == 0 => return Ok(None),
+			Ok(n) => n,
+			Err(e) => {
+				return Err(format!(
+					"failed to read password from {}; err = {:?}",
+					address, e
+				));
+			}
+		};
+
+		return Ok(Some(String::from_utf8_lossy(&buf[0..n]).trim().to_string()));
+	}
+
+	Ok(None)
+}
+
+async fn command_prompt(
+	config: Arc<Config>,
+	socket: &mut tokio::net::TcpStream,
+	address: SocketAddr,
+) -> Result<Option<String>, String> {
+	if let Err(e) = socket.write_all(config.prompt.as_bytes()).await {
+		return Err(format!(
+			"failed to send prompt to {}; err = {:?}",
+			address, e
+		));
+	}
+
+	let mut buf = [0; 1024];
+	let n = match socket.read(&mut buf).await {
+		Ok(n) if n == 0 => return Ok(None),
+		Ok(n) => n,
+		Err(e) => {
+			return Err(format!(
+				"failed to read command from {}; err = {:?}",
+				address, e
+			));
+		}
+	};
+
+	Ok(Some(String::from_utf8_lossy(&buf[0..n]).trim().to_string()))
+}
 
 pub async fn handle(
 	mut socket: tokio::net::TcpStream,
@@ -24,144 +119,85 @@ pub async fn handle(
 
 	log.text("connected".to_owned());
 
-	let mut ok = false;
-
 	if !config.banner.is_empty() {
-		match socket.write_all(config.banner.as_bytes()).await {
-			Ok(_) => match socket.write_all("\r\n".as_bytes()).await {
-				Ok(_) => ok = true,
-				Err(e) => error!("failed to send banner to {}; err = {:?}", address, e),
-			},
-			Err(e) => error!("failed to send banner to {}; err = {:?}", address, e),
+		if let Err(e) = socket.write_all(config.banner.as_bytes()).await {
+			error!("failed to send banner to {}; err = {:?}", address, e);
+			return;
+		} else if let Err(e) = socket.write_all("\r\n".as_bytes()).await {
+			error!("failed to send banner to {}; err = {:?}", address, e);
+			return;
 		}
 	}
 
-	let mut buf = [0; 1024];
+	let username = match login_prompt(config.clone(), &mut socket, address).await {
+		Ok(username) => username,
+		Err(e) => {
+			error!("{}", e);
+			return;
+		}
+	};
 
-	while ok {
-		let mut username: Option<String> = None;
-		let mut password: Option<String> = None;
+	let password = match password_prompt(config.clone(), &mut socket, address).await {
+		Ok(password) => password,
+		Err(e) => {
+			error!("{}", e);
+			return;
+		}
+	};
 
-		if !config.login_prompt.is_empty() {
-			match socket.write_all(config.login_prompt.as_bytes()).await {
-				Ok(_) => {}
-				Err(e) => {
-					error!("failed to send login prompt to {}; err = {:?}", address, e);
-					break;
-				}
+	if let Some(user) = username {
+		log.auth(user, password);
+	}
+
+	while let Ok(Some(command)) = command_prompt(config.clone(), &mut socket, address).await {
+		log.command(command.clone());
+
+		let mut output: Option<String> = None;
+		for parser in &mut service.lock().unwrap().commands {
+			if let Some(out) = parser.parse(&command) {
+				output = Some(out);
+				break;
 			}
-
-			let n = match socket.read(&mut buf).await {
-				Ok(n) if n == 0 => break,
-				Ok(n) => n,
-				Err(e) => {
-					error!("failed to read login from {}; err = {:?}", address, e);
-					break;
-				}
-			};
-
-			username = Some(String::from_utf8_lossy(&buf[0..n]).trim().to_string());
 		}
 
-		if !config.password_prompt.is_empty() {
-			match socket.write_all(config.password_prompt.as_bytes()).await {
-				Ok(_) => {}
-				Err(e) => {
-					error!(
-						"failed to send password prompt to {}; err = {:?}",
-						address, e
-					);
-					break;
-				}
-			}
-
-			let n = match socket.read(&mut buf).await {
-				Ok(n) if n == 0 => break,
-				Ok(n) => n,
-				Err(e) => {
-					error!("failed to read password from {}; err = {:?}", address, e);
-					break;
-				}
-			};
-
-			password = Some(String::from_utf8_lossy(&buf[0..n]).trim().to_string());
-		}
-
-		if let Some(user) = username {
-			log.auth(user, password);
-		}
-
-		while ok {
-			match socket.write_all(config.prompt.as_bytes()).await {
-				Ok(_) => {}
-				Err(e) => {
-					error!("failed to send prompt to {}; err = {:?}", address, e);
-					ok = false;
-					break;
-				}
-			}
-			let n = match socket.read(&mut buf).await {
-				Ok(n) if n == 0 => {
-					ok = false;
-					break;
-				}
-				Ok(n) => n,
-				Err(e) => {
-					error!("failed to read password from {}; err = {:?}", address, e);
-					ok = false;
-					break;
-				}
-			};
-
-			let command = String::from_utf8_lossy(&buf[0..n]).trim().to_string();
-
-			log.command(command.clone());
-
-			let mut output: Option<String> = None;
-			for parser in &mut service.lock().unwrap().commands {
-				if let Some(out) = parser.parse(&command) {
-					output = Some(out);
-					break;
-				}
-			}
-
-			if let Some(output) = output {
-				if output == "@exit" {
-					ok = false;
-				} else {
-					match socket.write_all(output.as_bytes()).await {
-						Ok(_) => {}
-						Err(e) => {
-							error!("failed to send output to {}; err = {:?}", address, e);
-							ok = false;
-						}
-					}
-				}
+		if let Some(output) = output {
+			if output == "@exit" {
+				break;
 			} else {
-				match socket
-					.write_all(
-						format!(
-							"\r\nsh: command not found: {:?}",
-							command.split(' ').collect::<Vec<&str>>()[0]
-						)
-						.as_bytes(),
-					)
-					.await
-				{
+				match socket.write_all(output.as_bytes()).await {
 					Ok(_) => {}
 					Err(e) => {
 						error!("failed to send output to {}; err = {:?}", address, e);
-						ok = false;
+						break;
 					}
 				}
 			}
+		} else {
+			debug!("'{}' command not found", command);
 
-			match socket.write_all("\r\n".as_bytes()).await {
+			match socket
+				.write_all(
+					format!(
+						"\r\nsh: command not found: {:?}",
+						command.split(' ').collect::<Vec<&str>>()[0]
+					)
+					.as_bytes(),
+				)
+				.await
+			{
 				Ok(_) => {}
 				Err(e) => {
-					error!("failed to send banner to {}; err = {:?}", address, e);
-					ok = false;
+					error!("failed to send output to {}; err = {:?}", address, e);
+					break;
 				}
+			}
+		}
+
+		match socket.write_all("\r\n".as_bytes()).await {
+			Ok(_) => {}
+			Err(e) => {
+				error!("failed to send banner to {}; err = {:?}", address, e);
+				break;
 			}
 		}
 	}
