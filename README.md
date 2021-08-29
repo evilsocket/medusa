@@ -112,22 +112,7 @@ proto: http
 address: '127.0.0.1:8080'
 commands:
   - parser: '.*'
-    handler: |
-      MikroTik RouterOS:
-        Version: 6.45.6
-        Interfaces:
-          sfp-sfpplus1
-          sfp-sfpplus2
-          ether1 - TCL 1 Gig WAN - INPUT
-          ether2
-          ether3
-          ether4
-          ether5 - Invetnum SR
-          ether6 - SIFY INPUT 1stm
-          ether7-Inventum SR 2 WAN
-          ether8
-          bridge1
-          Alcore - 309
+    handler: "<html><body>hello world</body></html>"
 ```
 
 ### Docker Jail
@@ -145,15 +130,17 @@ commands:
   - parser: '^exit(\s.+)?$'
     handler: '@exit'
   - parser: '^(.+)$'
-    handler: '@docker medusajail {$1}'
+    handler: '@docker jail {$1}'
 ```
 
-You can create and start a jail container with:
+You can create and start a `jail` container with:
 
-	docker container create --name medusajail busybox tail -f /dev/null # feel free to pick any image
-	docker start medusajail
+```sh
+docker container create --name jail busybox tail -f /dev/null # feel free to pick any image
+docker start jail
+```
 
-This will execute any command that the client is sending on the `medusajail` container and it will transparently pass the output to the client.
+This will execute any command that the client is sending on the `jail` container and it will transparently pass the output to the client.
 
 Configuring a realistic docker container is beyond the purpose of this document, you can find useful images [here](https://github.com/plajjan/vrnetlab).
 
