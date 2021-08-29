@@ -150,7 +150,7 @@ pub async fn handle(
 	}
 
 	while let Ok(Some(command)) = command_prompt(config.clone(), &mut socket, address).await {
-		for command in command.split("\n") {
+		for command in command.split('\n') {
 			let command = command.trim().to_string();
 			if command.is_empty() {
 				continue;

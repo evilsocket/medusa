@@ -1,15 +1,18 @@
-use std::fs::{self, File};
-use std::io::{self, BufReader};
-use std::path::Path;
+use std::fs::File;
+use std::io::BufReader;
 use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
-use log::{debug, info};
+use log::debug;
 
 use tokio::net::TcpListener;
-use tokio_rustls::rustls::internal::pemfile::{certs, rsa_private_keys};
-use tokio_rustls::rustls::{Certificate, NoClientAuth, PrivateKey, ServerConfig};
-use tokio_rustls::TlsAcceptor;
+use tokio_rustls::{
+	rustls::{
+		internal::pemfile::{certs, rsa_private_keys},
+		NoClientAuth, ServerConfig,
+	},
+	TlsAcceptor,
+};
 
 use crate::{
 	config::{Config as MainConfig, Service},
