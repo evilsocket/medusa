@@ -76,7 +76,13 @@ impl Record {
 	}
 
 	pub fn raw(&mut self, data: Vec<u8>) {
-		debug!("[{}] <{}> {:?}", &self.service, self.address, &data);
+		debug!(
+			"[{}] <{}> {:?} -> {:?}",
+			&self.service,
+			self.address,
+			&data,
+			String::from_utf8(data.clone())
+		);
 		self.entries.push(Entry::new(Data::Raw(data)));
 	}
 
