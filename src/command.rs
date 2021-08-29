@@ -67,7 +67,14 @@ impl Command {
 				data += String::from_utf8_lossy(&output.stderr).trim();
 				data = data.replace("\n", "\r\n");
 
-				debug!("{}", &data);
+				debug!(
+					"{}",
+					if data.len() <= 100 {
+						&data
+					} else {
+						&data[..100]
+					}
+				);
 
 				self.cache.insert(handler, data.clone());
 				return Some(data);

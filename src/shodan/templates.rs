@@ -28,7 +28,7 @@ pub fn ssh(port_num: u64, data: &str) -> String {
 	config.insert("prompt".to_string(), serde_yaml::to_value("# ").unwrap());
 	config.insert(
 		"key".to_string(),
-		serde_yaml::to_value("/tmp/medusa-ssh.key").unwrap(),
+		serde_yaml::to_value(crate::protocols::ssh::config::DEFAULT_KEY_FILE).unwrap(),
 	);
 	config.insert("timeout".to_string(), serde_yaml::to_value(15).unwrap());
 
@@ -106,6 +106,7 @@ pub fn http(
 	port_num: u64,
 	data: &str,
 	port: &serde_json::Map<String, serde_json::Value>,
+	tls: bool,
 ) -> String {
 	let http = port.get("http").unwrap().as_object().unwrap();
 	let response = http.get("html").unwrap().as_str().unwrap();
@@ -130,6 +131,18 @@ pub fn http(
 		"headers".to_string(),
 		serde_yaml::to_value(headers).unwrap(),
 	);
+
+	if tls {
+		config.insert("tls".to_string(), serde_yaml::to_value(true).unwrap());
+		config.insert(
+			"key".to_string(),
+			serde_yaml::to_value(crate::protocols::http::config::DEFAULT_KEY_FILE).unwrap(),
+		);
+		config.insert(
+			"certificate".to_string(),
+			serde_yaml::to_value(crate::protocols::http::config::DEFAULT_CERT_FILE).unwrap(),
+		);
+	}
 
 	serde_yaml::to_string(&Service {
 		proto: "http".to_owned(),

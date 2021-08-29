@@ -6,10 +6,10 @@ use thrussh_keys::{self, encode_pkcs8_pem, load_secret_key};
 
 use crate::{config::Service, protocols::Error};
 
-const DEFAULT_ID: &str = "SSH-2.0-OpenSSH_7.2p2 Ubuntu-4ubuntu2.10";
-const DEFAULT_PROMPT: &str = "# ";
-const DEFAULT_KEY_FILE: &str = "/tmp/medusa-ssh.key";
-const DEFAULT_TIMEOUT: u64 = 10;
+pub const DEFAULT_ID: &str = "SSH-2.0-OpenSSH_7.2p2 Ubuntu-4ubuntu2.10";
+pub const DEFAULT_PROMPT: &str = "# ";
+pub const DEFAULT_KEY_FILE: &str = "/tmp/medusa-ssh.key";
+pub const DEFAULT_TIMEOUT: u64 = 10;
 
 pub fn from_service(svc: &Service) -> Config {
 	let address = svc.address.to_owned();

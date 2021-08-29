@@ -66,11 +66,8 @@ pub async fn clone(host: &str, api_key: &str, output: &str) {
 		let yaml = match (module, proto) {
 			("ssh", _) => templates::ssh(port_num, data),
 			("telnet", _) => templates::telnet(port_num, data),
-			("http", _) => templates::http(port_num, data, port),
-			("https", _) => {
-				warn!("https not yet supported, skipping");
-				continue;
-			}
+			("http", _) => templates::http(port_num, data, port, false),
+			("https", _) => templates::http(port_num, data, port, true),
 			(_, "tcp") => templates::tcp(port_num, data),
 			(_, "udp") => templates::udp(port_num, data),
 			(_, _) => {

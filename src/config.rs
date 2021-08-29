@@ -25,6 +25,14 @@ impl Service {
 			.to_string()
 	}
 
+	pub fn bool(&self, name: &str, default: bool) -> bool {
+		self.config
+			.get(name)
+			.unwrap_or(&serde_yaml::Value::Bool(default))
+			.as_bool()
+			.unwrap_or(default)
+	}
+
 	pub fn unsigned(&self, name: &str, default: u64) -> u64 {
 		self.config
 			.get(name)

@@ -1,6 +1,6 @@
 # Medusa
 
-A fast and secure multi protocol honeypot that can mimic realistic devices running `ssh`, `telnet`, `http` or other `tcp` and `udp` servers. 
+A fast and secure multi protocol honeypot that can mimic realistic devices running `ssh`, `telnet`, `http`, `https` or any other `tcp` and `udp` servers. 
 
 **Work in progress.**
 
@@ -184,6 +184,40 @@ HTTP server emulation with custom headers:
 ```yaml
 proto: http 
 address: '127.0.0.1:8181'
+headers:
+  - 'Content-Type: text/html; charset=UTF-8'
+  - 'X-Powered-By: TerraMaster'
+  - 'Server: TOS/1.16.1'
+  
+commands:
+  - parser: '.*'
+    handler: |
+      <!--user login-->
+      <!DOCTYPE HTML>
+      <html>
+      <head>
+          <title>TOS</title>
+      </head>
+      <div>
+          Hello World
+      </div>
+      </html>
+```
+
+HTTPS is also supported, you'll need to generate a new RSA key and certificate first:
+
+```sh
+ openssl req -newkey rsa:2048 -nodes -keyout medusa-https.key -x509 -days 365 -out medusa-https.crt
+```
+
+Then just enable `tls` in your `http` service configuration:
+
+```yaml
+proto: http 
+address: '127.0.0.1:8181'
+tls: true
+key: medusa-https.key
+certificate: medusa-https.crt
 headers:
   - 'Content-Type: text/html; charset=UTF-8'
   - 'X-Powered-By: TerraMaster'

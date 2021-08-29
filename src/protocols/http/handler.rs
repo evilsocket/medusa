@@ -30,8 +30,8 @@ fn response(code: u32, message: &str, headers: &[String], data: Option<String>) 
 	resp
 }
 
-pub async fn handle(
-	mut socket: tokio::net::TcpStream,
+pub async fn handle<S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin>(
+	mut socket: S,
 	address: SocketAddr,
 	service_name: String,
 	service: Arc<Mutex<Service>>,
