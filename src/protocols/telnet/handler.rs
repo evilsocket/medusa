@@ -150,25 +150,47 @@ pub async fn handle(
 	}
 
 	while let Ok(Some(command)) = command_prompt(config.clone(), &mut socket, address).await {
-		if command.is_empty() {
-			continue;
-		}
-
-		log.command(command.clone());
-
-		let mut output: Option<String> = None;
-		for parser in &mut service.lock().unwrap().commands {
-			if let Some(out) = parser.parse(&command) {
-				output = Some(out);
-				break;
+		for command in command.split("\n") {
+			let command = command.trim().to_string();
+			if command.is_empty() {
+				continue;
 			}
-		}
 
-		if let Some(output) = output {
-			if output == "@exit" {
-				break;
+			log.command(command.clone());
+
+			let mut output: Option<String> = None;
+			for parser in &mut service.lock().unwrap().commands {
+				if let Some(out) = parser.parse(&command) {
+					output = Some(out);
+					break;
+				}
+			}
+
+			if let Some(output) = output {
+				if output == "@exit" {
+					break;
+				} else {
+					match socket.write_all(output.as_bytes()).await {
+						Ok(_) => {}
+						Err(e) => {
+							error!("failed to send output to {}; err = {:?}", address, e);
+							break;
+						}
+					}
+				}
 			} else {
-				match socket.write_all(output.as_bytes()).await {
+				debug!("'{}' command not found", command);
+
+				match socket
+					.write_all(
+						format!(
+							"\r\nsh: command not found: {:?}",
+							command.split(' ').collect::<Vec<&str>>()[0]
+						)
+						.as_bytes(),
+					)
+					.await
+				{
 					Ok(_) => {}
 					Err(e) => {
 						error!("failed to send output to {}; err = {:?}", address, e);
@@ -176,32 +198,13 @@ pub async fn handle(
 					}
 				}
 			}
-		} else {
-			debug!("'{}' command not found", command);
 
-			match socket
-				.write_all(
-					format!(
-						"\r\nsh: command not found: {:?}",
-						command.split(' ').collect::<Vec<&str>>()[0]
-					)
-					.as_bytes(),
-				)
-				.await
-			{
+			match socket.write_all("\r\n".as_bytes()).await {
 				Ok(_) => {}
 				Err(e) => {
-					error!("failed to send output to {}; err = {:?}", address, e);
+					error!("failed to send banner to {}; err = {:?}", address, e);
 					break;
 				}
-			}
-		}
-
-		match socket.write_all("\r\n".as_bytes()).await {
-			Ok(_) => {}
-			Err(e) => {
-				error!("failed to send banner to {}; err = {:?}", address, e);
-				break;
 			}
 		}
 	}
