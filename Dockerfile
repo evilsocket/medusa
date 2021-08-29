@@ -16,9 +16,4 @@ COPY ./src ./src
 RUN rm ./target/release/deps/medusa*
 RUN cargo build --release
 
-# final stage, no rust, only the compiled binary
-FROM debian:buster-slim
-
-COPY --from=build /medusa/target/release/medusa .
-
-CMD ["./medusa", "--services", "/etc/medusa/services.d", "--records", "/var/lib/medusa/records"]
+ENTRYPOINT ["/medusa/target/release/medusa", "--services", "/etc/medusa/services.d", "--records", "/var/lib/medusa/records"]

@@ -1,28 +1,67 @@
-Medusa is a fast and secure multi protocol honeypot that can mimic realistic devices running `ssh`, `telnet`, `http` or other `tcp` and `udp` servers. 
+# Medusa
+
+A fast and secure multi protocol honeypot that can mimic realistic devices running `ssh`, `telnet`, `http` or other `tcp` and `udp` servers. 
 
 **Work in progress.**
 
 ## Building
 
-No precompiled binaries for the time being.
+Using Docker (recommended):
+
+```sh
+docker build -t medusa .
+docker run \
+  -v /path/to/services.d:/etc/medusa/services.d \
+  -v /path/to/records:/var/lib/medusa/records \
+  --network host \
+  medusa
+```
+
+Depending on your services configuration this last command line might need additional parameters to open TCP and UDP ports.
 
 You can build from sources if you have Rust installed in your system:
 
-	cargo build 
+```sh
+cargo build 
+```
 
-Or using Docker:
+## Shodan Host Clone
 
-    docker build -t medusa .
-    docker run -v /path/to/services.d:/etc/medusa/services.d -v /path/to/records:/var/lib/medusa/records medusa
+You can use `medusa` to create a (best-effort) clone of a device that's indexed on shodan.io. 
 
-Depending on your services configuration this last command line might need additional parameters to open TCP and UDP ports.
+In order to do this you'll need an API key:
+
+```sh
+export SHODAN_API_KEY=your_api_key_here
+```
+
+Then you can clone a host (`38.18.235.213` in this example) with:
+
+```sh
+docker run -v $(pwd)/mikrotik:/mikrotik medusa \
+  --shodan-api-key $SHODAN_API_KEY \
+  --shodan-clone 38.18.235.213 \
+  --output /mikrotik
+```
+
+This will create the YAML service files inside the `mikrotik` folder. This folder can then be used with:
+
+```sh
+docker run \
+  -v $(pwd)/mikrotik:/etc/medusa/services.d \
+  -v $(pwd)/records:/var/lib/medusa/records \
+  --network host \
+  medusa
+```
 
 ## Usage
 
 First you need to create at least one service file. Let's begin by defining a simple SSH honeypot that accepts any combination of user and password:
 
-	mkdir -p /path/to/services.d/
-	touch /path/to/services.d/example-ssh.yml
+```sh
+mkdir -p /path/to/services.d/
+touch /path/to/services.d/example-ssh.yml
+```
 
 Open `/path/to/services.d/example-ssh.yml` with your favorite editor and paste these contents:
 
@@ -40,7 +79,9 @@ commands:
 
 Now run:
 
-	medusa --services "/path/to/services.d/" --records "/path/to/output/records"
+```sh
+medusa --services "/path/to/services.d/" --records "/path/to/output/records"
+```
 
 This will start a single honeypoint on port 2222 and all the resulting events will be saved as JSON files in the folder indicated by `--records`.
 

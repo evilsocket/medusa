@@ -17,6 +17,15 @@ struct Options {
     /// Record files destination path.
     #[clap(short, long, default_value = "records")]
     pub records: String,
+    /// Clone the network structure of a host by using shodan.io, requires --shodan-api-key
+    #[clap(long)]
+    pub shodan_clone: Option<String>,
+    /// Shodan API key.
+    #[clap(long, default_value = "")]
+    pub shodan_api_key: String,
+    /// Output path.
+    #[clap(long, default_value = "")]
+    pub output: String,
     /// Enable debug verbosity.
     #[clap(long)]
     pub debug: bool,
@@ -26,6 +35,7 @@ mod command;
 mod config;
 mod protocols;
 mod record;
+mod shodan;
 
 fn setup() -> Options {
     let mut options: Options = Options::parse();
@@ -37,10 +47,16 @@ fn setup() -> Options {
     .format_target(false)
     .init();
 
-    debug!("creating {}", &options.records);
     fs::create_dir_all(&options.records).expect("could not create record path");
-    debug!("creating {}", &options.services);
     fs::create_dir_all(&options.services).expect("could not create services path");
+    if !options.output.is_empty() {
+        fs::create_dir_all(&options.output).expect("could not create output path");
+        options.output = fs::canonicalize(&options.output)
+            .expect("could not canonicalize output path")
+            .to_str()
+            .unwrap()
+            .to_owned();
+    }
 
     options.records = fs::canonicalize(&options.records)
         .expect("could not canonicalize records path")
@@ -94,6 +110,12 @@ fn load_services(from: &str, records: &str) -> config::Config {
 #[tokio::main]
 async fn main() {
     let options = setup();
+
+    if let Some(host) = options.shodan_clone {
+        shodan::clone(&host, &options.shodan_api_key, &options.output).await;
+        return;
+    }
+
     let config = load_services(&options.services, &options.records);
 
     let mut services = HashMap::new();

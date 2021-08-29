@@ -2,9 +2,9 @@ use std::collections::HashMap;
 
 use log::debug;
 use regex::Regex;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Deserialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct Command {
 	parser: String,
 	handler: String,
@@ -15,6 +15,15 @@ pub struct Command {
 }
 
 impl Command {
+	pub fn new(parser: String, handler: String) -> Self {
+		Self {
+			parser,
+			handler,
+			compiled: None,
+			cache: HashMap::new(),
+		}
+	}
+
 	pub fn parse(&mut self, command: &str) -> Option<String> {
 		// compile regexp if needed
 		if self.compiled.is_none() {
@@ -47,7 +56,7 @@ impl Command {
 				let args = vec!["exec", image, "sh", "-c", command];
 
 				debug!("docker {:?}", args);
-
+				// TODO: replace with https://github.com/softprops/shiplift
 				let output = std::process::Command::new("docker")
 					.args(&args)
 					.output()
