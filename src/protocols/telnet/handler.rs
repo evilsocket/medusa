@@ -150,6 +150,10 @@ pub async fn handle(
 	}
 
 	while let Ok(Some(command)) = command_prompt(config.clone(), &mut socket, address).await {
+		if command.is_empty() {
+			continue;
+		}
+
 		log.command(command.clone());
 
 		let mut output: Option<String> = None;
