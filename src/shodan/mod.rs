@@ -79,6 +79,9 @@ pub async fn clone(host: &str, api_key: &str, output: &str) {
 			}
 		};
 
+		// FIXME: for some reason hex escape sequences are not encoded correctly and end up as \\xNN
+		let yaml = yaml.replace("\\\\x", "\\x");
+
 		fs::write(filename, yaml).expect("could not create file for service");
 	}
 }
