@@ -50,7 +50,8 @@ impl CommandHandler {
 	pub fn parse(&mut self, command: &str) -> Option<String> {
 		if self.compiled.is_none() {
 			self.compiled = Some(
-				Regex::new(&self.parser).expect(format!("could not compile '{}'", &self, parser)),
+				Regex::new(&self.parser)
+					.unwrap_or_else(|_| panic!("could not compile '{}'", &self.parser)),
 			);
 		}
 
