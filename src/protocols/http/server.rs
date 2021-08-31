@@ -8,7 +8,7 @@ use log::debug;
 use tokio::net::TcpListener;
 use tokio_rustls::{
 	rustls::{
-		internal::pemfile::{certs, rsa_private_keys},
+		internal::pemfile::{certs, pkcs8_private_keys, rsa_private_keys},
 		NoClientAuth, ServerConfig,
 	},
 	TlsAcceptor,
@@ -34,6 +34,47 @@ pub struct Server {
 }
 
 impl Server {
+	fn configure_tls(config: &Config) -> Result<Option<TlsAcceptor>, Error> {
+		let mut tls: Option<TlsAcceptor> = None;
+		if config.tls {
+			let certs = certs(&mut BufReader::new(File::open(&config.cert_file).map_err(
+				|e| format!("could not open {}: {}", config.cert_file, e.to_string()),
+			)?))
+			.map_err(|_| "invalid certificate")?;
+
+			let mut keys =
+				pkcs8_private_keys(&mut BufReader::new(File::open(&config.key_file).map_err(
+					|e| format!("could not open {}: {}", config.key_file, e.to_string()),
+				)?))
+				.map_err(|_| "invalid key")?;
+
+			if keys.len() < 1 {
+				// try PKCS#1 first
+				keys =
+					rsa_private_keys(&mut BufReader::new(File::open(&config.key_file).map_err(
+						|e| format!("could not open {}: {}", config.key_file, e.to_string()),
+					)?))
+					.map_err(|_| "invalid key")?;
+
+				if keys.len() < 1 {
+					return Err(format!(
+						"no valid PKCS#8 or PKCS#1 encoded keys found in {}",
+						&config.key_file
+					));
+				}
+			}
+
+			let mut config = ServerConfig::new(NoClientAuth::new());
+			config.set_single_cert(certs, keys.remove(0)).map_err(|e| {
+				format!("could not set https certificate and key: {}", e.to_string())
+			})?;
+
+			tls = Some(TlsAcceptor::from(Arc::new(config)));
+		}
+
+		Ok(tls)
+	}
+
 	pub fn new(
 		service_name: String,
 		service: Arc<Mutex<Service>>,
@@ -42,26 +83,7 @@ impl Server {
 		let config = config::from_service(service.lock().as_ref().unwrap());
 		let config = Arc::new(config);
 		let main_config = Arc::new(main_config);
-		let tls_acceptor = match config.tls {
-			false => None,
-			true => {
-				let certs = certs(&mut BufReader::new(
-					File::open(&config.cert_file).map_err(|e| e.to_string())?,
-				))
-				.map_err(|_| "invalid certificate")?;
-				let mut keys = rsa_private_keys(&mut BufReader::new(
-					File::open(&config.key_file).map_err(|e| e.to_string())?,
-				))
-				.map_err(|_| "invalid key")?;
-
-				let mut config = ServerConfig::new(NoClientAuth::new());
-				config
-					.set_single_cert(certs, keys.remove(0))
-					.map_err(|e| e.to_string())?;
-
-				Some(TlsAcceptor::from(Arc::new(config)))
-			}
-		};
+		let tls_acceptor = Self::configure_tls(&config)?;
 
 		Ok(Server {
 			service_name,
