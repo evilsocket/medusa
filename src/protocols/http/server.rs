@@ -48,15 +48,15 @@ impl Server {
 				)?))
 				.map_err(|_| "invalid key")?;
 
-			if keys.len() < 1 {
-				// try PKCS#1 first
+			if keys.is_empty() {
+				// try PKCS#1 before returning an error
 				keys =
 					rsa_private_keys(&mut BufReader::new(File::open(&config.key_file).map_err(
 						|e| format!("could not open {}: {}", config.key_file, e.to_string()),
 					)?))
 					.map_err(|_| "invalid key")?;
 
-				if keys.len() < 1 {
+				if keys.is_empty() {
 					return Err(format!(
 						"no valid PKCS#8 or PKCS#1 encoded keys found in {}",
 						&config.key_file

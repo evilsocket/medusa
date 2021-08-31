@@ -31,10 +31,10 @@ struct Options {
     pub debug: bool,
 }
 
-mod command;
 mod config;
 mod protocols;
 mod record;
+mod shell;
 mod shodan;
 
 fn setup() -> Options {

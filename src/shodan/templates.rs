@@ -3,7 +3,10 @@ use std::collections::HashMap;
 use lazy_static::lazy_static;
 use regex::Regex;
 
-use crate::{command::Command, config::Service};
+use crate::{
+	config::Service,
+	shell::handler::{CommandHandler, EXIT_HANDLER_TOKEN},
+};
 
 const HTTP_IGNORE_HEADERS: &[&str] = &["connection", "content-length", "date"];
 
@@ -12,10 +15,11 @@ lazy_static! {
 }
 
 pub fn ssh(port_num: u64, data: &str) -> String {
-	let commands = vec![Command::new(
-		r"^exit(\s.+)?$".to_owned(),
-		"@exit".to_owned(),
-	)];
+	let commands =
+		vec![
+			CommandHandler::new(r"^exit(\s.+)?$".to_owned(), EXIT_HANDLER_TOKEN.to_owned())
+				.unwrap(),
+		];
 
 	let server_id = data.splitn(2, '\n').next().unwrap();
 
@@ -42,10 +46,11 @@ pub fn ssh(port_num: u64, data: &str) -> String {
 }
 
 pub fn telnet(port_num: u64, data: &str) -> String {
-	let commands = vec![Command::new(
-		r"^exit(\s.+)?$".to_owned(),
-		"@exit".to_owned(),
-	)];
+	let commands =
+		vec![
+			CommandHandler::new(r"^exit(\s.+)?$".to_owned(), EXIT_HANDLER_TOKEN.to_owned())
+				.unwrap(),
+		];
 
 	let mut config: HashMap<String, serde_yaml::Value> = HashMap::new();
 
@@ -123,7 +128,7 @@ pub fn http(
 		}
 	}
 
-	let commands = vec![Command::new(r".*".to_owned(), response.to_owned())];
+	let commands = vec![CommandHandler::new(r".*".to_owned(), response.to_owned()).unwrap()];
 
 	let mut config: HashMap<String, serde_yaml::Value> = HashMap::new();
 

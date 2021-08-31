@@ -1,7 +1,24 @@
 [package]
 name = "medusa"
 version = "0.1.0"
+authors = ["Simone Margaritelli <evilsocket@gmail.com>"]
 edition = "2018"
+description = "Medusa - A fast and secure multi protocol honeypot."
+license = "GPL-3.0"
+repository = "https://github.com/evilsocket/medusa"
+# documentation = "https://docs.rs/medusa/"
+readme = "README.md"
+keywords = [
+	"honeypot",
+	"security",
+	"telnet",
+	"ssh",
+	"http",
+	"iot",
+]
+
+[package.metadata.docs.rs]
+all-features = true
 
 [dependencies]
 anyhow = "1.0.43"

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use super::command;
+use super::shell::handler::CommandHandler;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Service {
@@ -10,7 +10,7 @@ pub struct Service {
 	pub address: String,
 	#[serde(skip_serializing_if = "Vec::is_empty")]
 	#[serde(default)]
-	pub commands: Vec<command::Command>,
+	pub commands: Vec<CommandHandler>,
 	#[serde(flatten)]
 	pub config: HashMap<String, serde_yaml::Value>,
 }

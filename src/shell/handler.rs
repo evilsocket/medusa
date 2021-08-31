@@ -1,11 +1,18 @@
 use std::collections::HashMap;
 
+use lazy_static::lazy_static;
 use log::debug;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
+pub const EXIT_HANDLER_TOKEN: &str = "@exit";
+
+lazy_static! {
+	static ref DOCKER_HANDLER_PARSER: Regex = Regex::new(r"^@docker\s+([^\s]+)\s+(.+)$").unwrap();
+}
+
 #[derive(Clone, Deserialize, Serialize, Debug)]
-pub struct Command {
+pub struct CommandHandler {
 	parser: String,
 	handler: String,
 	#[serde(skip)]
@@ -14,45 +21,46 @@ pub struct Command {
 	cache: HashMap<String, String>,
 }
 
-impl Command {
-	pub fn new(parser: String, handler: String) -> Self {
-		Self {
+impl CommandHandler {
+	pub fn new(parser: String, handler: String) -> Result<Self, String> {
+		let compiled = Some(
+			Regex::new(&parser).map_err(|e| format!("can't compile regex '{}': {}", &parser, e))?,
+		);
+		Ok(Self {
 			parser,
 			handler,
-			compiled: None,
+			compiled,
 			cache: HashMap::new(),
+		})
+	}
+
+	fn handle_with_captures(&self, captures: &regex::Captures) -> String {
+		// substitute {{$N}} tokens with matches
+		let mut handler = self.handler.to_owned();
+		let num = captures.len();
+		for n in 1..num {
+			let token = format!("{{${}}}", n).to_string();
+			if handler.contains(&token) {
+				handler = handler.replace(&token, &captures[n]);
+			}
 		}
+		handler
 	}
 
 	pub fn parse(&mut self, command: &str) -> Option<String> {
-		// compile regexp if needed
-		if self.compiled.is_none() {
-			self.compiled = Some(Regex::new(&self.parser).unwrap());
-		}
 		// check command for matches
 		if let Some(captures) = self.compiled.as_ref().unwrap().captures(command) {
-			// substitute {{$N}} tokens with matches
-			let mut handler = self.handler.to_owned();
-			let num = captures.len();
-			for n in 1..num {
-				let token = format!("{{${}}}", n).to_string();
-				if handler.contains(&token) {
-					handler = handler.replace(&token, &captures[n]);
-				}
-			}
+			let handler = self.handle_with_captures(&captures);
 
+			// check cache first
 			if let Some(out) = self.cache.get(&handler) {
 				debug!("'{}' from cache: {}", &handler, out.len());
-				// return from cache
 				return Some(out.to_string());
-			} else if handler.starts_with("@docker ") {
-				let mut iter = handler.splitn(3, ' ');
-				let (_, image, command) = (
-					iter.next().unwrap(),
-					iter.next().unwrap(),
-					iter.next().unwrap(),
-				);
+			}
 
+			// docker exec?
+			if let Some(exec) = DOCKER_HANDLER_PARSER.captures(&handler) {
+				let (image, command) = (&exec[1], &exec[2]);
 				let args = vec!["exec", image, "sh", "-c", command];
 
 				debug!("docker {:?}", args);

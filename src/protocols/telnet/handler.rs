@@ -8,6 +8,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use crate::{
 	config::{Config as MainConfig, Service},
 	record,
+	shell::handler::EXIT_HANDLER_TOKEN,
 };
 
 use super::config::Config;
@@ -167,7 +168,7 @@ pub async fn handle(
 			}
 
 			if let Some(output) = output {
-				if output == "@exit" {
+				if output == EXIT_HANDLER_TOKEN {
 					break;
 				} else {
 					match socket.write_all(output.as_bytes()).await {

@@ -12,6 +12,7 @@ use crate::{
 	config::{Config as MainConfig, Service},
 	protocols::ssh::config::Config,
 	record,
+	shell::handler::EXIT_HANDLER_TOKEN,
 };
 
 pub struct ClientHandler {
@@ -58,7 +59,7 @@ impl ClientHandler {
 		}
 
 		if let Some(output) = output {
-			if output == "@exit" {
+			if output == EXIT_HANDLER_TOKEN {
 				return true;
 			} else {
 				session.data(channel, self.line_break.clone());
