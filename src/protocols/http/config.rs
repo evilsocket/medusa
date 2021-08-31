@@ -1,6 +1,6 @@
 use crate::config::Service;
 
-pub const DEFAULT_CERT_FILE: &str = "/tmp/medusa-https.cert";
+pub const DEFAULT_CERT_FILE: &str = "/tmp/medusa-https.crt";
 pub const DEFAULT_KEY_FILE: &str = "/tmp/medusa-https.key";
 
 pub fn from_service(svc: &Service) -> Config {
