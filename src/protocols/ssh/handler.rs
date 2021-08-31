@@ -34,7 +34,7 @@ impl ClientHandler {
 	) -> Self {
 		let mut log = record::for_address("ssh", &service_name, address);
 
-		log.text("connected".to_owned());
+		log.log("connected".to_owned());
 
 		Self {
 			prompt: CryptoVec::from_slice(config.prompt.as_bytes()),
@@ -87,7 +87,7 @@ impl ClientHandler {
 
 impl Drop for ClientHandler {
 	fn drop(&mut self) {
-		self.log.text("disconnected".to_owned());
+		self.log.log("disconnected".to_owned());
 
 		match self.log.save(&self.config.records.path) {
 			Ok(path) => info!("saved {} entries to {:?}", self.log.size(), path),
@@ -156,7 +156,7 @@ impl server::Handler for ClientHandler {
 		originator_port: u32,
 		session: Session,
 	) -> Self::FutureUnit {
-		self.log.text(format!(
+		self.log.log(format!(
 			"channel open x11 {}:{}",
 			originator_address, originator_port
 		));
@@ -173,7 +173,7 @@ impl server::Handler for ClientHandler {
 		originator_port: u32,
 		session: Session,
 	) -> Self::FutureUnit {
-		self.log.text(format!(
+		self.log.log(format!(
 			"channel open direct tcpip {}:{} -> {}:{}",
 			originator_address, originator_port, host_to_connect, port_to_connect,
 		));
@@ -186,7 +186,7 @@ impl server::Handler for ClientHandler {
 		channel: ChannelId,
 		mut session: Session,
 	) -> Self::FutureUnit {
-		self.log.text("session start".to_string());
+		self.log.log("session start".to_string());
 
 		session.data(channel, self.prompt.clone());
 
@@ -194,19 +194,19 @@ impl server::Handler for ClientHandler {
 	}
 
 	fn channel_close(mut self, _channel: ChannelId, session: Session) -> Self::FutureUnit {
-		self.log.text("channel close".to_string());
+		self.log.log("channel close".to_string());
 
 		self.finished(session)
 	}
 
 	fn channel_eof(mut self, _channel: ChannelId, session: Session) -> Self::FutureUnit {
-		self.log.text("channel eof".to_string());
+		self.log.log("channel eof".to_string());
 
 		self.finished(session)
 	}
 
 	fn shell_request(mut self, _channel: ChannelId, session: Session) -> Self::FutureUnit {
-		self.log.text("shell request".to_string());
+		self.log.log("shell request".to_string());
 
 		self.finished(session)
 	}
@@ -235,7 +235,7 @@ impl server::Handler for ClientHandler {
 		name: &str,
 		session: Session,
 	) -> Self::FutureUnit {
-		self.log.text(format!("subsystem request: '{}'", name));
+		self.log.log(format!("subsystem request: '{}'", name));
 
 		self.finished(session)
 	}

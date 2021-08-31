@@ -8,7 +8,7 @@ use serde::Serialize;
 #[serde(tag = "type", content = "data")]
 pub enum Data {
 	Authentication(String, Option<String>),
-	Text(String),
+	Log(String),
 	Command(String),
 	Request(String),
 	Raw(Vec<u8>),
@@ -17,11 +17,13 @@ pub enum Data {
 impl fmt::Display for Data {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 		match self {
-			Self::Authentication(user, pass) => write!(f, "user={} pass={:?}", user, pass),
-			Self::Text(s) => write!(f, "{}", s),
-			Self::Command(s) => write!(f, "{}", s),
-			Self::Request(s) => write!(f, "{}", s),
-			Self::Raw(data) => write!(f, "{:?}", str::from_utf8(data)),
+			Self::Authentication(user, pass) => {
+				write!(f, "authentication: user={} pass={:?}", user, pass)
+			}
+			Self::Log(s) => write!(f, "{}", s),
+			Self::Command(s) => write!(f, "command: {}", s),
+			Self::Request(s) => write!(f, "request: {}", s),
+			Self::Raw(data) => write!(f, "raw: {:?}", str::from_utf8(data)),
 		}
 	}
 }
@@ -51,9 +53,9 @@ pub struct Record {
 }
 
 impl Record {
-	pub fn text(&mut self, text: String) {
+	pub fn log(&mut self, text: String) {
 		debug!("[{}] <{}> {}", &self.service, self.address, &text);
-		self.entries.push(Entry::new(Data::Text(text)));
+		self.entries.push(Entry::new(Data::Log(text)));
 	}
 
 	pub fn auth(&mut self, user: String, pass: Option<String>) {
@@ -90,35 +92,6 @@ impl Record {
 		self.entries.len()
 	}
 
-	fn reduce(&mut self) {
-		let mut entries: Vec<Entry> = Vec::new();
-		let mut data: Vec<u8> = Vec::new();
-
-		// FIXME: only time adjacent bytes should be concatenated.
-
-		for entry in &self.entries {
-			match &entry.data {
-				Data::Raw(raw) => {
-					data.extend(raw);
-				}
-				_ => {
-					if !data.is_empty() {
-						entries.push(Entry::new(Data::Raw(data.clone())));
-						data.clear();
-					}
-					entries.push(entry.clone());
-				}
-			}
-		}
-
-		if !data.is_empty() {
-			entries.push(Entry::new(Data::Raw(data.clone())));
-			data.clear();
-		}
-
-		self.entries = entries;
-	}
-
 	fn path(&self, folder: &str) -> PathBuf {
 		let mut path = PathBuf::from(folder);
 
@@ -141,8 +114,6 @@ impl Record {
 		};
 
 		fs::create_dir_all(parent).map_err(|e| format!("could not create {:?}: {}", parent, e))?;
-
-		self.reduce();
 
 		let data = serde_json::to_string_pretty(self)
 			.map_err(|e| format!("could not convert record to json: {}", e))?;

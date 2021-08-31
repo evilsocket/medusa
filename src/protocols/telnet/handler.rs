@@ -118,7 +118,7 @@ pub async fn handle(
 ) {
 	let mut log = record::for_address("telnet", &service_name, address);
 
-	log.text("connected".to_owned());
+	log.log("connected".to_owned());
 
 	if !config.banner.is_empty() {
 		if let Err(e) = socket.write_all(config.banner.as_bytes()).await {
@@ -210,7 +210,7 @@ pub async fn handle(
 		}
 	}
 
-	log.text("disconnected".to_string());
+	log.log("disconnected".to_string());
 
 	match log.save(&main_config.records.path) {
 		Ok(path) => info!("saved {} entries to {:?}", log.size(), path),

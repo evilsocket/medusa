@@ -22,7 +22,7 @@ pub async fn handle(
 ) {
 	let mut log = record::for_address("tcp", &service_name, address);
 
-	log.text("connected".to_owned());
+	log.log("connected".to_owned());
 
 	let mut ok = false;
 
@@ -70,7 +70,7 @@ pub async fn handle(
 		}
 	}
 
-	log.text("disconnected".to_string());
+	log.log("disconnected".to_string());
 
 	match log.save(&main_config.records.path) {
 		Ok(path) => info!("saved {} entries to {:?}", log.size(), path),

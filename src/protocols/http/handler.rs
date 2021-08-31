@@ -40,7 +40,7 @@ pub async fn handle<S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin>(
 ) {
 	let mut log = record::for_address("http", &service_name, address);
 
-	log.text("connected".to_owned());
+	log.log("connected".to_owned());
 
 	let mut buf = [0; 8192];
 
@@ -87,7 +87,7 @@ pub async fn handle<S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin>(
 		}
 	}
 
-	log.text("disconnected".to_string());
+	log.log("disconnected".to_string());
 
 	match log.save(&main_config.records.path) {
 		Ok(path) => info!("saved {} entries to {:?}", log.size(), path),
