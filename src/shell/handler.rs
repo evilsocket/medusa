@@ -48,6 +48,12 @@ impl CommandHandler {
 	}
 
 	pub fn parse(&mut self, command: &str) -> Option<String> {
+		if self.compiled.is_none() {
+			self.compiled = Some(
+				Regex::new(&self.parser).expect(format!("could not compile '{}'", &self, parser)),
+			);
+		}
+
 		// check command for matches
 		if let Some(captures) = self.compiled.as_ref().unwrap().captures(command) {
 			let handler = self.handle_with_captures(&captures);
