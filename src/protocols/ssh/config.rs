@@ -72,6 +72,7 @@ impl Config {
 		}
 
 		ssh_config.server_id = self.server_id.to_owned();
+		ssh_config.auth_rejection_time = Duration::ZERO;
 		ssh_config.methods = thrussh::MethodSet::NONE
 			| thrussh::MethodSet::PASSWORD
 			| thrussh::MethodSet::PUBLICKEY

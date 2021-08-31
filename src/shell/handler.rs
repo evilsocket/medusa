@@ -1,9 +1,11 @@
 use std::collections::HashMap;
 
 use lazy_static::lazy_static;
-use log::debug;
+use log::{debug, error};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+
+use super::docker;
 
 pub const EXIT_HANDLER_TOKEN: &str = "@exit";
 
@@ -47,6 +49,7 @@ impl CommandHandler {
 		handler
 	}
 
+	// TODO: this should return a Result<Option<String>, Error>
 	pub fn parse(&mut self, command: &str) -> Option<String> {
 		if self.compiled.is_none() {
 			self.compiled = Some(
@@ -67,32 +70,20 @@ impl CommandHandler {
 
 			// docker exec?
 			if let Some(exec) = DOCKER_HANDLER_PARSER.captures(&handler) {
-				let (image, command) = (&exec[1], &exec[2]);
-				let args = vec!["exec", image, "sh", "-c", command];
-
-				debug!("docker {:?}", args);
-				// TODO: replace with https://github.com/softprops/shiplift
-				let output = std::process::Command::new("docker")
-					.args(&args)
-					.output()
-					.unwrap();
-
-				let mut data = String::from_utf8_lossy(&output.stdout).to_string();
-
-				data += String::from_utf8_lossy(&output.stderr).trim();
-				data = data.replace("\n", "\r\n");
-
-				debug!(
-					"{}",
-					if data.len() <= 100 {
-						&data
-					} else {
-						&data[..100]
+				let (container_id, command) = (&exec[1], &exec[2]);
+				match docker::exec(&container_id, &command) {
+					Ok(data) => {
+						self.cache.insert(handler, data.clone());
+						return Some(data);
 					}
-				);
-
-				self.cache.insert(handler, data.clone());
-				return Some(data);
+					Err(e) => {
+						error!(
+							"error running '{}' inside container '{}': {}",
+							command, container_id, e
+						);
+						return Some("".to_owned());
+					}
+				}
 			}
 
 			return Some(handler);
