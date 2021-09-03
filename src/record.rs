@@ -46,9 +46,11 @@ impl Entry {
 #[derive(Debug, Clone, Serialize)]
 pub struct Record {
 	created_at: DateTime<Utc>,
+	hostname: String,
 	protocol: String,
 	service: String,
 	address: String,
+	port: u16,
 	entries: Vec<Entry>,
 }
 
@@ -125,11 +127,17 @@ impl Record {
 }
 
 pub fn for_address(protocol: &str, service: &str, address: SocketAddr) -> Record {
+	let hostname = gethostname::gethostname()
+		.to_str()
+		.unwrap_or("could not detect hostname")
+		.to_owned();
 	Record {
 		created_at: Utc::now(),
 		protocol: protocol.to_owned(),
 		service: service.to_owned(),
 		entries: Vec::new(),
 		address: address.ip().to_string(),
+		port: address.port(),
+		hostname,
 	}
 }
