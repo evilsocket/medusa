@@ -1,9 +1,13 @@
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use log::{error, info};
 
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::{
+	io::{AsyncReadExt, AsyncWriteExt},
+	time::timeout,
+};
 
 use crate::{
 	config::{Config as MainConfig, Service},
@@ -25,10 +29,11 @@ pub async fn handle(
 	log.log("connected".to_owned());
 
 	let mut ok = false;
+	let rw_timeout = Duration::from_secs(config.timeout);
 
 	if !config.banner.is_empty() {
-		match socket.write_all(config.banner.as_bytes()).await {
-			Ok(_) => match socket.write_all("\r\n".as_bytes()).await {
+		match timeout(rw_timeout, socket.write_all(config.banner.as_bytes())).await {
+			Ok(_) => match timeout(rw_timeout, socket.write_all("\r\n".as_bytes())).await {
 				Ok(_) => ok = true,
 				Err(e) => error!("failed to send banner to {}; err = {:?}", address, e),
 			},
@@ -40,16 +45,18 @@ pub async fn handle(
 
 	if ok {
 		loop {
-			let n = match socket.read(&mut buf).await {
-				Ok(n) if n == 0 => {
-					break;
-				}
+			let n = match timeout(rw_timeout, socket.read(&mut buf)).await {
 				Ok(n) => n,
 				Err(e) => {
 					error!("failed to read from {}; err = {:?}", address, e);
 					break;
 				}
 			};
+
+			let n = n.unwrap_or(0);
+			if n == 0 {
+				break;
+			}
 
 			log.raw(buf[..n].to_vec());
 			let command = String::from_utf8_lossy(&buf[..n]);
@@ -63,7 +70,7 @@ pub async fn handle(
 			}
 
 			if let Some(output) = output {
-				if let Err(e) = socket.write_all(output.as_bytes()).await {
+				if let Err(e) = timeout(rw_timeout, socket.write_all(output.as_bytes())).await {
 					error!("failed to send response to {}; err = {:?}", address, e);
 				}
 			}

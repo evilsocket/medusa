@@ -1,9 +1,13 @@
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use log::{debug, error, info};
 
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::{
+	io::{AsyncReadExt, AsyncWriteExt},
+	time::timeout,
+};
 
 use crate::{
 	config::{Config as MainConfig, Service},
@@ -17,21 +21,19 @@ async fn login_prompt(
 	config: Arc<Config>,
 	socket: &mut tokio::net::TcpStream,
 	address: SocketAddr,
+	rw_timeout: Duration,
 ) -> Result<Option<String>, String> {
 	if !config.login_prompt.is_empty() {
-		match socket.write_all(config.login_prompt.as_bytes()).await {
-			Ok(_) => {}
-			Err(e) => {
-				return Err(format!(
-					"failed to send login prompt to {}; err = {:?}",
-					address, e
-				));
-			}
+		if let Err(e) = timeout(rw_timeout, socket.write_all(config.login_prompt.as_bytes())).await
+		{
+			return Err(format!(
+				"failed to send login prompt to {}; err = {:?}",
+				address, e
+			));
 		}
 
 		let mut buf = [0; 1024];
-		let n = match socket.read(&mut buf).await {
-			Ok(n) if n == 0 => return Ok(None),
+		let n = match timeout(rw_timeout, socket.read(&mut buf)).await {
 			Ok(n) => n,
 			Err(e) => {
 				return Err(format!(
@@ -41,7 +43,13 @@ async fn login_prompt(
 			}
 		};
 
-		return Ok(Some(String::from_utf8_lossy(&buf[0..n]).trim().to_string()));
+		let n = n.unwrap_or(0);
+
+		return if n == 0 {
+			Ok(None)
+		} else {
+			Ok(Some(String::from_utf8_lossy(&buf[0..n]).trim().to_string()))
+		};
 	}
 
 	Ok(None)
@@ -51,21 +59,23 @@ async fn password_prompt(
 	config: Arc<Config>,
 	socket: &mut tokio::net::TcpStream,
 	address: SocketAddr,
+	rw_timeout: Duration,
 ) -> Result<Option<String>, String> {
 	if !config.password_prompt.is_empty() {
-		match socket.write_all(config.password_prompt.as_bytes()).await {
-			Ok(_) => {}
-			Err(e) => {
-				return Err(format!(
-					"failed to send password prompt to {}; err = {:?}",
-					address, e
-				));
-			}
+		if let Err(e) = timeout(
+			rw_timeout,
+			socket.write_all(config.password_prompt.as_bytes()),
+		)
+		.await
+		{
+			return Err(format!(
+				"failed to send password prompt to {}; err = {:?}",
+				address, e
+			));
 		}
 
 		let mut buf = [0; 1024];
-		let n = match socket.read(&mut buf).await {
-			Ok(n) if n == 0 => return Ok(None),
+		let n = match timeout(rw_timeout, socket.read(&mut buf)).await {
 			Ok(n) => n,
 			Err(e) => {
 				return Err(format!(
@@ -75,7 +85,12 @@ async fn password_prompt(
 			}
 		};
 
-		return Ok(Some(String::from_utf8_lossy(&buf[0..n]).trim().to_string()));
+		let n = n.unwrap_or(0);
+		return if n == 0 {
+			Ok(None)
+		} else {
+			Ok(Some(String::from_utf8_lossy(&buf[0..n]).trim().to_string()))
+		};
 	}
 
 	Ok(None)
@@ -85,8 +100,9 @@ async fn command_prompt(
 	config: Arc<Config>,
 	socket: &mut tokio::net::TcpStream,
 	address: SocketAddr,
+	rw_timeout: Duration,
 ) -> Result<Option<String>, String> {
-	if let Err(e) = socket.write_all(config.prompt.as_bytes()).await {
+	if let Err(e) = timeout(rw_timeout, socket.write_all(config.prompt.as_bytes())).await {
 		return Err(format!(
 			"failed to send prompt to {}; err = {:?}",
 			address, e
@@ -94,8 +110,7 @@ async fn command_prompt(
 	}
 
 	let mut buf = [0; 1024];
-	let n = match socket.read(&mut buf).await {
-		Ok(n) if n == 0 => return Ok(None),
+	let n = match timeout(rw_timeout, socket.read(&mut buf)).await {
 		Ok(n) => n,
 		Err(e) => {
 			return Err(format!(
@@ -105,7 +120,12 @@ async fn command_prompt(
 		}
 	};
 
-	Ok(Some(String::from_utf8_lossy(&buf[0..n]).trim().to_string()))
+	let n = n.unwrap_or(0);
+	return if n == 0 {
+		Ok(None)
+	} else {
+		Ok(Some(String::from_utf8_lossy(&buf[0..n]).trim().to_string()))
+	};
 }
 
 pub async fn handle(
@@ -120,8 +140,10 @@ pub async fn handle(
 
 	log.log("connected".to_owned());
 
+	let rw_timeout = Duration::from_secs(config.timeout);
+
 	if !config.banner.is_empty() {
-		if let Err(e) = socket.write_all(config.banner.as_bytes()).await {
+		if let Err(e) = timeout(rw_timeout, socket.write_all(config.banner.as_bytes())).await {
 			error!("failed to send banner to {}; err = {:?}", address, e);
 			return;
 		} else if let Err(e) = socket.write_all("\r\n".as_bytes()).await {
@@ -130,7 +152,7 @@ pub async fn handle(
 		}
 	}
 
-	let username = match login_prompt(config.clone(), &mut socket, address).await {
+	let username = match login_prompt(config.clone(), &mut socket, address, rw_timeout).await {
 		Ok(username) => username,
 		Err(e) => {
 			error!("{}", e);
@@ -138,7 +160,7 @@ pub async fn handle(
 		}
 	};
 
-	let password = match password_prompt(config.clone(), &mut socket, address).await {
+	let password = match password_prompt(config.clone(), &mut socket, address, rw_timeout).await {
 		Ok(password) => password,
 		Err(e) => {
 			error!("{}", e);
@@ -151,7 +173,9 @@ pub async fn handle(
 	}
 
 	let mut keep_going = true;
-	while let Ok(Some(command)) = command_prompt(config.clone(), &mut socket, address).await {
+	while let Ok(Some(command)) =
+		command_prompt(config.clone(), &mut socket, address, rw_timeout).await
+	{
 		for command in command.split('\n') {
 			let command = command.trim().to_string();
 			if command.is_empty() {
@@ -172,7 +196,9 @@ pub async fn handle(
 				if output == EXIT_HANDLER_TOKEN {
 					keep_going = false;
 					break;
-				} else if let Err(e) = socket.write_all(output.as_bytes()).await {
+				} else if let Err(e) =
+					timeout(rw_timeout, socket.write_all(output.as_bytes())).await
+				{
 					error!("failed to send output to {}; err = {:?}", address, e);
 					keep_going = false;
 					break;
@@ -180,15 +206,17 @@ pub async fn handle(
 			} else {
 				debug!("'{}' command not found", command);
 
-				if let Err(e) = socket
-					.write_all(
+				if let Err(e) = timeout(
+					rw_timeout,
+					socket.write_all(
 						format!(
 							"\r\nsh: command not found: {:?}",
 							command.split(' ').collect::<Vec<&str>>()[0]
 						)
 						.as_bytes(),
-					)
-					.await
+					),
+				)
+				.await
 				{
 					error!("failed to send output to {}; err = {:?}", address, e);
 					keep_going = false;
@@ -196,7 +224,7 @@ pub async fn handle(
 				}
 			}
 
-			if let Err(e) = socket.write_all("\r\n".as_bytes()).await {
+			if let Err(e) = timeout(rw_timeout, socket.write_all("\r\n".as_bytes())).await {
 				error!("failed to send banner to {}; err = {:?}", address, e);
 				keep_going = false;
 				break;

@@ -1,9 +1,10 @@
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use async_trait::async_trait;
 use log::{debug, error, info};
 
-use tokio::net::UdpSocket;
+use tokio::{net::UdpSocket, time::timeout};
 
 use crate::{
 	config::{Config as MainConfig, Service},
@@ -45,6 +46,7 @@ impl Protocol for Server {
 	async fn run(&self) {
 		debug!("starting udp on {} ...", &self.config.address);
 
+		let rw_timeout = Duration::from_secs(self.config.timeout);
 		let mut buf = [0; 1024];
 		let listener = UdpSocket::bind(&self.config.address).await.unwrap();
 		loop {
@@ -52,7 +54,12 @@ impl Protocol for Server {
 				let mut log = record::for_address("udp", &self.service_name, peer);
 
 				if !self.config.banner.is_empty() {
-					if let Err(e) = listener.send_to(self.config.banner.as_bytes(), &peer).await {
+					if let Err(e) = timeout(
+						rw_timeout,
+						listener.send_to(self.config.banner.as_bytes(), &peer),
+					)
+					.await
+					{
 						error!("error sending udp banner to {:?}: {}", peer, e);
 					}
 				}
@@ -70,7 +77,9 @@ impl Protocol for Server {
 				}
 
 				if let Some(output) = output {
-					if let Err(e) = listener.send_to(output.as_bytes(), &peer).await {
+					if let Err(e) =
+						timeout(rw_timeout, listener.send_to(output.as_bytes(), &peer)).await
+					{
 						error!("error sending udp response to {:?}: {}", peer, e);
 					}
 				}

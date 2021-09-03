@@ -1,9 +1,13 @@
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use log::{error, info};
 
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::{
+	io::{AsyncReadExt, AsyncWriteExt},
+	time::timeout,
+};
 
 use crate::{
 	config::{Config as MainConfig, Service},
@@ -40,12 +44,14 @@ pub async fn handle<S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin>(
 ) {
 	let mut log = record::for_address("http", &service_name, address);
 
+	let rw_timeout = Duration::from_secs(config.timeout);
+
 	log.log("connected".to_owned());
 
 	let mut buf = [0; 8192];
 
-	let n = match socket.read(&mut buf).await {
-		Ok(n) => n,
+	let n = match timeout(rw_timeout, socket.read(&mut buf)).await {
+		Ok(n) => n.unwrap_or(0),
 		Err(e) => {
 			error!("failed to read request from {}; err = {:?}", address, e);
 			0
@@ -70,19 +76,13 @@ pub async fn handle<S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin>(
 
 		if let Some(output) = output {
 			let response = response(200, "OK", &config.headers, Some(output));
-			match socket.write_all(response.as_bytes()).await {
-				Ok(_) => {}
-				Err(e) => {
-					error!("failed to send response to {}; err = {:?}", address, e);
-				}
+			if let Err(e) = timeout(rw_timeout, socket.write_all(response.as_bytes())).await {
+				error!("failed to send response to {}; err = {:?}", address, e);
 			}
 		} else {
 			let response = response(404, "Not Found", &config.headers, None);
-			match socket.write_all(response.as_bytes()).await {
-				Ok(_) => {}
-				Err(e) => {
-					error!("failed to send 404 response to {}; err = {:?}", address, e);
-				}
+			if let Err(e) = timeout(rw_timeout, socket.write_all(response.as_bytes())).await {
+				error!("failed to send 404 response to {}; err = {:?}", address, e);
 			}
 		}
 	}
