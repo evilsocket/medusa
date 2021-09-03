@@ -75,7 +75,7 @@ impl CommandHandler {
 			// docker exec?
 			if let Some(exec) = DOCKER_HANDLER_PARSER.captures(&handler) {
 				let (container_id, command) = (&exec[1], &exec[2]);
-				match docker::exec(&container_id, &command) {
+				match docker::exec(container_id, command) {
 					Ok(data) => {
 						self.cache.insert(handler, data.clone());
 						return Some(data);
