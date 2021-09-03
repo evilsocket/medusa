@@ -150,6 +150,7 @@ pub async fn handle(
 		log.auth(user, password);
 	}
 
+	let mut keep_going = true;
 	while let Ok(Some(command)) = command_prompt(config.clone(), &mut socket, address).await {
 		for command in command.split('\n') {
 			let command = command.trim().to_string();
@@ -169,20 +170,17 @@ pub async fn handle(
 
 			if let Some(output) = output {
 				if output == EXIT_HANDLER_TOKEN {
+					keep_going = false;
 					break;
-				} else {
-					match socket.write_all(output.as_bytes()).await {
-						Ok(_) => {}
-						Err(e) => {
-							error!("failed to send output to {}; err = {:?}", address, e);
-							break;
-						}
-					}
+				} else if let Err(e) = socket.write_all(output.as_bytes()).await {
+					error!("failed to send output to {}; err = {:?}", address, e);
+					keep_going = false;
+					break;
 				}
 			} else {
 				debug!("'{}' command not found", command);
 
-				match socket
+				if let Err(e) = socket
 					.write_all(
 						format!(
 							"\r\nsh: command not found: {:?}",
@@ -192,21 +190,21 @@ pub async fn handle(
 					)
 					.await
 				{
-					Ok(_) => {}
-					Err(e) => {
-						error!("failed to send output to {}; err = {:?}", address, e);
-						break;
-					}
-				}
-			}
-
-			match socket.write_all("\r\n".as_bytes()).await {
-				Ok(_) => {}
-				Err(e) => {
-					error!("failed to send banner to {}; err = {:?}", address, e);
+					error!("failed to send output to {}; err = {:?}", address, e);
+					keep_going = false;
 					break;
 				}
 			}
+
+			if let Err(e) = socket.write_all("\r\n".as_bytes()).await {
+				error!("failed to send banner to {}; err = {:?}", address, e);
+				keep_going = false;
+				break;
+			}
+		}
+
+		if !keep_going {
+			break;
 		}
 	}
 

@@ -51,6 +51,10 @@ impl CommandHandler {
 
 	// TODO: this should return a Result<Option<String>, Error>
 	pub fn parse(&mut self, command: &str) -> Option<String> {
+		if command == EXIT_HANDLER_TOKEN {
+			return Some(command.to_owned());
+		}
+
 		if self.compiled.is_none() {
 			self.compiled = Some(
 				Regex::new(&self.parser)

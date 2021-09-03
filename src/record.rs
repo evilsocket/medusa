@@ -48,7 +48,7 @@ pub struct Record {
 	created_at: DateTime<Utc>,
 	protocol: String,
 	service: String,
-	address: SocketAddr,
+	address: String,
 	entries: Vec<Entry>,
 }
 
@@ -95,7 +95,7 @@ impl Record {
 	fn path(&self, folder: &str) -> PathBuf {
 		let mut path = PathBuf::from(folder);
 
-		path.push(self.address.ip().to_string());
+		path.push(&self.address);
 		path.push(&self.service);
 
 		path.push(format!(
@@ -130,6 +130,6 @@ pub fn for_address(protocol: &str, service: &str, address: SocketAddr) -> Record
 		protocol: protocol.to_owned(),
 		service: service.to_owned(),
 		entries: Vec::new(),
-		address,
+		address: address.ip().to_string(),
 	}
 }

@@ -41,10 +41,8 @@ pub fn exec(container_id: &str, command: &str) -> Result<String, String> {
 
 	let response = format!("{{{}", response.splitn(2, '{').nth(1).unwrap());
 	let response: HashMap<String, String> = serde_json::from_str(&response).unwrap();
-	let exec_id = response.get("Id").unwrap();
+	let exec_id = response.get("Id").expect(&format!("{:?}", response));
 	debug!("exec_id = '{}'", exec_id);
-
-	drop(stream);
 
 	// start exec operation by id
 	let mut stream = UnixStream::connect(DOCKER_SOCKET)
