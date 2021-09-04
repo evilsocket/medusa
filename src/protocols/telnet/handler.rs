@@ -169,7 +169,7 @@ pub async fn handle(
 	};
 
 	if let Some(user) = username {
-		log.auth(user, password);
+		log.auth(user, password, None);
 	}
 
 	let mut keep_going = true;

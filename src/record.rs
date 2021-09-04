@@ -7,7 +7,11 @@ use serde::Serialize;
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "type", content = "data")]
 pub enum Data {
-	Authentication(String, Option<String>),
+	Authentication {
+		username: String,
+		password: Option<String>,
+		key: Option<String>,
+	},
 	Log(String),
 	Command(String),
 	Request(String),
@@ -17,8 +21,16 @@ pub enum Data {
 impl fmt::Display for Data {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 		match self {
-			Self::Authentication(user, pass) => {
-				write!(f, "authentication: user={} pass={:?}", user, pass)
+			Self::Authentication {
+				username,
+				password,
+				key,
+			} => {
+				write!(
+					f,
+					"authentication: user={} pass={:?} key={:?}",
+					username, password, key
+				)
 			}
 			Self::Log(s) => write!(f, "{}", s),
 			Self::Command(s) => write!(f, "command: {}", s),
@@ -46,11 +58,14 @@ impl Entry {
 #[derive(Debug, Clone, Serialize)]
 pub struct Record {
 	created_at: DateTime<Utc>,
+	// server info
 	hostname: String,
 	protocol: String,
 	service: String,
+	// client info
 	address: String,
 	port: u16,
+	// events
 	entries: Vec<Entry>,
 }
 
@@ -60,13 +75,16 @@ impl Record {
 		self.entries.push(Entry::new(Data::Log(text)));
 	}
 
-	pub fn auth(&mut self, user: String, pass: Option<String>) {
+	pub fn auth(&mut self, username: String, password: Option<String>, key: Option<String>) {
 		debug!(
-			"[{}] <{}> user={} pass={:?}",
-			&self.service, self.address, user, pass
+			"[{}] <{}> user={} pass={:?} key={:?}",
+			&self.service, self.address, username, password, key
 		);
-		self.entries
-			.push(Entry::new(Data::Authentication(user, pass)));
+		self.entries.push(Entry::new(Data::Authentication {
+			username,
+			password,
+			key,
+		}));
 	}
 
 	pub fn request(&mut self, request: String) {

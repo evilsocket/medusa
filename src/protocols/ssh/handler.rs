@@ -115,12 +115,13 @@ impl server::Handler for ClientHandler {
 	}
 
 	fn auth_none(mut self, user: &str) -> Self::FutureAuth {
-		self.log.auth(user.to_string(), None);
+		self.log.auth(user.to_string(), None, None);
 		self.finished_auth(Auth::Accept)
 	}
 
 	fn auth_password(mut self, user: &str, password: &str) -> Self::FutureAuth {
-		self.log.auth(user.to_string(), Some(password.to_string()));
+		self.log
+			.auth(user.to_string(), Some(password.to_string()), None);
 		self.finished_auth(Auth::Accept)
 	}
 
@@ -129,23 +130,18 @@ impl server::Handler for ClientHandler {
 		user: &str,
 		public_key: &thrussh_keys::key::PublicKey,
 	) -> Self::FutureAuth {
-		self.log.auth(
-			user.to_string(),
-			Some(format!("public key: {}", public_key.fingerprint())),
-		);
+		self.log
+			.auth(user.to_string(), None, Some(public_key.fingerprint()));
 		self.finished_auth(Auth::Accept)
 	}
 
 	fn auth_keyboard_interactive(
 		mut self,
 		user: &str,
-		submethods: &str,
+		_submethods: &str,
 		_: Option<thrussh::server::Response>,
 	) -> Self::FutureAuth {
-		self.log.auth(
-			user.to_string(),
-			Some(format!("submethods: {}", submethods)),
-		);
+		self.log.auth(user.to_string(), None, None);
 		self.finished_auth(Auth::Accept)
 	}
 
