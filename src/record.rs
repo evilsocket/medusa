@@ -76,9 +76,21 @@ impl Record {
 	}
 
 	pub fn auth(&mut self, username: String, password: Option<String>, key: Option<String>) {
-		debug!(
-			"[{}] <{}> user={} pass={:?} key={:?}",
-			&self.service, self.address, username, password, key
+		info!(
+			"[{}] <{}> AUTH: username:{}{}{}",
+			&self.service,
+			self.address,
+			username,
+			if password.is_some() {
+				format!(" password:{}", password.as_ref().unwrap())
+			} else {
+				"".to_owned()
+			},
+			if key.is_some() {
+				format!(" key:{}", key.as_ref().unwrap())
+			} else {
+				"".to_owned()
+			}
 		);
 		self.entries.push(Entry::new(Data::Authentication {
 			username,
