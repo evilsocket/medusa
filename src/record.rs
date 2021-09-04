@@ -2,10 +2,9 @@ use std::{fmt, fs, net::SocketAddr, path::PathBuf, str};
 
 use chrono::{DateTime, Utc};
 use log::{debug, info};
-use serde::Serialize;
+use serde::{ser::SerializeMap, ser::Serializer, Serialize};
 
-#[derive(Debug, Clone, Serialize)]
-#[serde(tag = "type", content = "data")]
+#[derive(Debug, Clone)]
 pub enum Data {
 	Authentication {
 		username: String,
@@ -16,6 +15,66 @@ pub enum Data {
 	Command(String),
 	Request(String),
 	Raw(Vec<u8>),
+}
+
+// we need a custom serialization strategy because many systems such as ElasticSearch go crazy
+// if for different documents in the same index, the same field has a different type.
+// In the case of this enum, the "data" field would always be a string (or a Vec<u8>, that apparently
+// doesn't break ES) but for the Authentication case.
+// In order to avoid this, we want authentication data to be serialized as a string.
+impl Serialize for Data {
+	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+	where
+		S: Serializer,
+	{
+		let mut map = serializer.serialize_map(Some(2))?;
+
+		match self {
+			Self::Authentication {
+				username,
+				password,
+				key,
+			} => {
+				map.serialize_entry("type", "auth").unwrap();
+				map.serialize_entry(
+					"data",
+					&format!(
+						"username:{}{}{}",
+						username,
+						if password.is_some() {
+							format!(" password:{}", password.as_ref().unwrap())
+						} else {
+							"".to_owned()
+						},
+						if key.is_some() {
+							format!(" key:{}", key.as_ref().unwrap())
+						} else {
+							"".to_owned()
+						}
+					),
+				)
+				.unwrap();
+			}
+			Self::Log(s) => {
+				map.serialize_entry("type", "log").unwrap();
+				map.serialize_entry("data", s).unwrap();
+			}
+			Self::Command(s) => {
+				map.serialize_entry("type", "command").unwrap();
+				map.serialize_entry("data", s).unwrap();
+			}
+			Self::Request(s) => {
+				map.serialize_entry("type", "request").unwrap();
+				map.serialize_entry("data", s).unwrap();
+			}
+			Self::Raw(data) => {
+				map.serialize_entry("type", "raw").unwrap();
+				map.serialize_entry("data", data).unwrap();
+			}
+		};
+
+		map.end()
+	}
 }
 
 impl fmt::Display for Data {

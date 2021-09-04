@@ -2,3 +2,5 @@
 /services.d
 /records
 /*.log
+/compose/medusa/services.d/*.yml
+/compose/medusa/records/*

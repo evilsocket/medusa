@@ -1,0 +1,6 @@
+general:
+  log_path: "" # if nothing is specified it prints logs on stdout
+  rules_path: "/etc/driplane/rules.d/" # path containing the rules
+  # js_path: "js" path of the js plugins
+  # templates_path: "templates" # path of templates
+  debug: false # if true enable the debug logs

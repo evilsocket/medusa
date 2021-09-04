@@ -1,0 +1,9 @@
+medusa => <folder: name="/var/lib/medusa/records", type="local", disable_fsnotify="true", freq="1s">;
+
+import_medusa_records => @medusa | 
+	# echo() | # print files as they're created
+	file() | # read them
+	elasticsearch(address="http://localhost:9200/", index="attacks", retries="10") | # save them to the db
+	# echo() | # print their document id
+	system(cmd="rm {{ .key }}"); # delete the original record file
+
