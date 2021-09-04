@@ -46,7 +46,7 @@ fn create_exec(container_id: &str, command: &str) -> Result<String, String> {
 	let content = format!(
 		"{{
 		\"AttachStdout\": true,
-		\"Tty\": true,
+		\"Tty\": false,
 		\"Cmd\": [ \"sh\", \"-c\", {}]
 	  }}",
 		serde_json::to_string(command).unwrap()
@@ -87,7 +87,7 @@ fn do_exec(exec_id: &str) -> Result<String, String> {
 
 	let content = "{
 			\"Detach\": false,
-			\"Tty\": true
+			\"Tty\": false
 		  }";
 	let request = format!("POST /exec/{}/start HTTP/1.0\r\n", exec_id)
 		+ "Content-Type: application/json\r\n"

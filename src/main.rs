@@ -120,7 +120,7 @@ fn load_services(options: &Options) -> config::Config {
     config
 }
 
-#[tokio::main]
+#[tokio::main(flavor = "multi_thread", worker_threads = 32)]
 async fn main() {
     let options = setup();
 
