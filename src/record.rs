@@ -138,7 +138,9 @@ impl Record {
 		let data = serde_json::to_string_pretty(self)
 			.map_err(|e| format!("could not convert record to json: {}", e))?;
 
-		fs::write(&path, data).expect("could not write record");
+		if let Err(e) = fs::write(&path, data) {
+			return Err(format!("could not write record: {}", e));
+		}
 
 		Ok(path)
 	}

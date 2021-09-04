@@ -54,14 +54,12 @@ fn create_exec(container_id: &str, command: &str) -> Result<String, String> {
 	// parse as generic hashmap
 	let response: HashMap<String, String> = serde_json::from_str(&response).unwrap();
 	// get exec id
-	let exec_id = response
-		.get("Id")
-		.unwrap_or_else(|| panic!("{:?}", response))
-		.to_owned();
+	if let Some(exec_id) = response.get("Id") {
+		debug!("exec_id = '{}'", &exec_id);
+		return Ok(exec_id.to_owned());
+	}
 
-	debug!("exec_id = '{}'", &exec_id);
-
-	Ok(exec_id)
+	Err(format!("{:?}", response))
 }
 
 fn do_exec(exec_id: &str) -> Result<String, String> {
