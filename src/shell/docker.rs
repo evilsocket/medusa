@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::io::prelude::*;
 use std::os::unix::net::UnixStream;
+use std::time::Duration;
 
 use log::debug;
 
@@ -33,6 +34,14 @@ fn create_exec(container_id: &str, command: &str) -> Result<String, String> {
 
 	let mut stream = UnixStream::connect(DOCKER_SOCKET)
 		.map_err(|e| format!("could not connect to {}: {}", DOCKER_SOCKET, e))?;
+
+	stream
+		.set_read_timeout(Some(Duration::from_secs(5)))
+		.map_err(|e| format!("could not set read timeout for {}: {}", DOCKER_SOCKET, e))?;
+
+	stream
+		.set_write_timeout(Some(Duration::from_secs(5)))
+		.map_err(|e| format!("could not set write timeout for {}: {}", DOCKER_SOCKET, e))?;
 
 	let content = format!(
 		"{{
@@ -67,6 +76,14 @@ fn do_exec(exec_id: &str) -> Result<String, String> {
 
 	let mut stream = UnixStream::connect(DOCKER_SOCKET)
 		.map_err(|e| format!("could not connect to {}: {}", DOCKER_SOCKET, e))?;
+
+	stream
+		.set_read_timeout(Some(Duration::from_secs(5)))
+		.map_err(|e| format!("could not set read timeout for {}: {}", DOCKER_SOCKET, e))?;
+
+	stream
+		.set_write_timeout(Some(Duration::from_secs(5)))
+		.map_err(|e| format!("could not set write timeout for {}: {}", DOCKER_SOCKET, e))?;
 
 	let content = "{
 			\"Detach\": false,
