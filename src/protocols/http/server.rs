@@ -3,7 +3,7 @@ use std::io::BufReader;
 use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
-use log::debug;
+use log::{debug, warn};
 
 use tokio::net::TcpListener;
 use tokio_rustls::{
@@ -106,6 +106,12 @@ impl Protocol for Server {
 
 		let listener = TcpListener::bind(&self.config.address).await.unwrap();
 		while let Ok((socket, addr)) = listener.accept().await {
+			if !self.main_config.is_allowed_ip(&addr.ip()) {
+				warn!("{} not allowed", addr);
+				drop(socket);
+				continue;
+			}
+
 			if let Some(acceptor) = &self.tls_acceptor {
 				if let Ok(stream) = acceptor.accept(socket).await {
 					tokio::spawn(handler::handle(

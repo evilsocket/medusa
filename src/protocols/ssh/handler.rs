@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex};
 
 use futures::future;
 use hex_slice::AsHex;
-use log::{error, info};
+use log::{error, info, warn};
 use thrussh::{
 	server::{self, Auth, Session},
 	ChannelId, CryptoVec,
@@ -17,6 +17,7 @@ use crate::{
 
 pub struct ClientHandler {
 	log: record::Record,
+	address: std::net::SocketAddr,
 	service: Arc<Mutex<Service>>,
 	config: Arc<MainConfig>,
 	prompt: CryptoVec,
@@ -40,7 +41,8 @@ impl ClientHandler {
 			prompt: CryptoVec::from_slice(config.prompt.as_bytes()),
 			line_break: CryptoVec::from_slice(b"\r\n"),
 			log,
-			config: main_config,
+			address,
+			config: main_config.clone(),
 			service,
 			command: vec![],
 		}
@@ -83,6 +85,14 @@ impl ClientHandler {
 
 		false
 	}
+
+	fn auth_policy(&self) -> Auth {
+		if self.config.is_allowed_ip(&self.address.ip()) {
+			Auth::Accept
+		} else {
+			Auth::Reject
+		}
+	}
 }
 
 impl Drop for ClientHandler {
@@ -103,6 +113,9 @@ impl server::Handler for ClientHandler {
 	type FutureBool = future::Ready<Result<(Self, Session, bool), anyhow::Error>>;
 
 	fn finished_auth(self, auth: Auth) -> Self::FutureAuth {
+		if auth == Auth::Reject {
+			warn!("rejecting {}", self.address);
+		}
 		future::ready(Ok((self, auth)))
 	}
 
@@ -115,14 +128,18 @@ impl server::Handler for ClientHandler {
 	}
 
 	fn auth_none(mut self, user: &str) -> Self::FutureAuth {
+		let policy = self.auth_policy();
+
 		self.log.auth(user.to_string(), None, None);
-		self.finished_auth(Auth::Accept)
+		self.finished_auth(policy)
 	}
 
 	fn auth_password(mut self, user: &str, password: &str) -> Self::FutureAuth {
+		let policy = self.auth_policy();
+
 		self.log
 			.auth(user.to_string(), Some(password.to_string()), None);
-		self.finished_auth(Auth::Accept)
+		self.finished_auth(policy)
 	}
 
 	fn auth_publickey(
@@ -130,9 +147,11 @@ impl server::Handler for ClientHandler {
 		user: &str,
 		public_key: &thrussh_keys::key::PublicKey,
 	) -> Self::FutureAuth {
+		let policy = self.auth_policy();
+
 		self.log
 			.auth(user.to_string(), None, Some(public_key.fingerprint()));
-		self.finished_auth(Auth::Accept)
+		self.finished_auth(policy)
 	}
 
 	fn auth_keyboard_interactive(
@@ -141,8 +160,10 @@ impl server::Handler for ClientHandler {
 		_submethods: &str,
 		_: Option<thrussh::server::Response>,
 	) -> Self::FutureAuth {
+		let policy = self.auth_policy();
+
 		self.log.auth(user.to_string(), None, None);
-		self.finished_auth(Auth::Accept)
+		self.finished_auth(policy)
 	}
 
 	fn channel_open_x11(
@@ -249,8 +270,6 @@ impl server::Handler for ClientHandler {
 	}
 
 	fn data(mut self, channel: ChannelId, data: &[u8], mut session: Session) -> Self::FutureUnit {
-		// self.log.raw(data.to_owned());
-
 		match data {
 			// TODO: handle backspace
 			b"\r" => {

@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::net::IpAddr;
 
 use serde::{Deserialize, Serialize};
 
@@ -72,6 +73,7 @@ impl Records {
 pub struct Config {
 	pub records: Records,
 	pub services: HashMap<String, Service>,
+	pub only: Vec<IpAddr>,
 }
 
 impl Config {
@@ -79,6 +81,11 @@ impl Config {
 		Self {
 			records: Records::new(),
 			services: HashMap::new(),
+			only: vec![],
 		}
+	}
+
+	pub fn is_allowed_ip(&self, ip: &IpAddr) -> bool {
+		self.only.is_empty() || self.only.contains(ip)
 	}
 }

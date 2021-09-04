@@ -26,6 +26,9 @@ struct Options {
     /// Output path.
     #[clap(long, default_value = "")]
     pub output: String,
+    /// Comma separated value of IP addresses to allow. If filled, any other client will be rejected.
+    #[clap(long, default_value = "")]
+    pub only: String,
     /// Enable debug verbosity.
     #[clap(long)]
     pub debug: bool,
@@ -73,14 +76,24 @@ fn setup() -> Options {
     options
 }
 
-fn load_services(from: &str, records: &str) -> config::Config {
-    debug!("loading services from {} ...", from);
+fn load_services(options: &Options) -> config::Config {
+    debug!("loading services from {} ...", &options.services);
 
     let mut config = config::Config::new();
 
-    config.records.path = records.to_string();
+    config.records.path = options.records.to_string();
 
-    for entry in glob(&format!("{}/**/*.yml", from)).unwrap() {
+    if !options.only.is_empty() {
+        config.only = options
+            .only
+            .split(',')
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+            .map(|s| s.parse().unwrap())
+            .collect();
+    }
+
+    for entry in glob(&format!("{}/**/*.yml", options.services)).unwrap() {
         match entry {
             Ok(path) => {
                 debug!("loading {}", path.display());
@@ -88,7 +101,7 @@ fn load_services(from: &str, records: &str) -> config::Config {
                 let service_name = path
                     .to_str()
                     .unwrap()
-                    .replace(from, "")
+                    .replace(&options.services, "")
                     .trim_start_matches('/')
                     .trim_end_matches(".yml")
                     .replace("/", "-")
@@ -116,7 +129,7 @@ async fn main() {
         return;
     }
 
-    let config = load_services(&options.services, &options.records);
+    let config = load_services(&options);
 
     let mut services = HashMap::new();
     let mut futures = Vec::new();

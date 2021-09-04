@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use async_trait::async_trait;
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 
 use tokio::{net::UdpSocket, time::timeout};
 
@@ -51,6 +51,12 @@ impl Protocol for Server {
 		let listener = UdpSocket::bind(&self.config.address).await.unwrap();
 		loop {
 			if let Ok((size, peer)) = listener.recv_from(&mut buf).await {
+				if !self.main_config.is_allowed_ip(&peer.ip()) {
+					warn!("{} not allowed", peer);
+					drop(peer);
+					continue;
+				}
+
 				let mut log = record::for_address("udp", &self.service_name, peer);
 
 				if !self.config.banner.is_empty() {
