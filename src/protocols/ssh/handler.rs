@@ -42,7 +42,7 @@ impl ClientHandler {
 			line_break: CryptoVec::from_slice(b"\r\n"),
 			log,
 			address,
-			config: main_config.clone(),
+			config: main_config,
 			service,
 			command: vec![],
 		}

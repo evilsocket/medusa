@@ -63,6 +63,15 @@ pub async fn clone(host: &str, api_key: &str, output: &str) {
 			filename,
 		);
 
+		// in some cases shodan reports an "auto" module with tcp transport but the
+		// data is clearly an http response ( https://www.shodan.io/host/155.94.163.147/raw#102 )
+		// fix the module for proper parsing.
+		let module = if proto == "tcp" && module == "auto" && data.contains("HTTP/") {
+			"http"
+		} else {
+			module
+		};
+
 		let yaml = match (module, proto) {
 			("ssh", _) => templates::ssh(port_num, data),
 			("telnet", _) => templates::telnet(port_num, data),

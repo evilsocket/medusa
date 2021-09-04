@@ -53,7 +53,6 @@ impl Protocol for Server {
 			if let Ok((size, peer)) = listener.recv_from(&mut buf).await {
 				if !self.main_config.is_allowed_ip(&peer.ip()) {
 					warn!("{} not allowed", peer);
-					drop(peer);
 					continue;
 				}
 
