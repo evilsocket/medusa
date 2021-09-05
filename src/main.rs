@@ -178,7 +178,7 @@ async fn main() {
         }
 
         if futures.len() > 1 {
-            ports.sort();
+            ports.sort_unstable();
             info!(
                 "all services started on ports: {}",
                 ports

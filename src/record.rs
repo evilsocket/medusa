@@ -1,7 +1,7 @@
 use std::{fmt, fs, net::SocketAddr, path::PathBuf, str};
 
 use chrono::{DateTime, Utc};
-use log::{debug, info};
+use log::info;
 use serde::{ser::SerializeMap, ser::Serializer, Serialize};
 
 #[derive(Debug, Clone)]
@@ -130,7 +130,7 @@ pub struct Record {
 
 impl Record {
 	pub fn log(&mut self, text: String) {
-		debug!("[{}] <{}> {}", &self.service, self.address, &text);
+		info!("[{}] <{}> {}", &self.service, self.address, &text);
 		self.entries.push(Entry::new(Data::Log(text)));
 	}
 
@@ -159,7 +159,7 @@ impl Record {
 	}
 
 	pub fn request(&mut self, request: String) {
-		debug!("[{}] <{}> {}", &self.service, self.address, &request);
+		info!("[{}] <{}> {}", &self.service, self.address, &request);
 		self.entries.push(Entry::new(Data::Request(request)));
 	}
 
@@ -169,7 +169,7 @@ impl Record {
 	}
 
 	pub fn raw(&mut self, data: Vec<u8>) {
-		debug!(
+		info!(
 			"[{}] <{}> {:?} -> {:?}",
 			&self.service,
 			self.address,
