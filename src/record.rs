@@ -94,7 +94,13 @@ impl fmt::Display for Data {
 			Self::Log(s) => write!(f, "{}", s),
 			Self::Command(s) => write!(f, "command: {}", s),
 			Self::Request(s) => write!(f, "request: {}", s),
-			Self::Raw(data) => write!(f, "raw: {:?}", str::from_utf8(data)),
+			Self::Raw(data) => {
+				if let Ok(s) = str::from_utf8(data) {
+					write!(f, "raw: '{}'", s)
+				} else {
+					write!(f, "raw: {:?}", data)
+				}
+			}
 		}
 	}
 }
@@ -169,14 +175,9 @@ impl Record {
 	}
 
 	pub fn raw(&mut self, data: Vec<u8>) {
-		info!(
-			"[{}] <{}> {:?} -> {:?}",
-			&self.service,
-			self.address,
-			&data,
-			String::from_utf8(data.clone())
-		);
-		self.entries.push(Entry::new(Data::Raw(data)));
+		let entry = Entry::new(Data::Raw(data));
+		info!("[{}] <{}> {}", &self.service, self.address, &entry.data);
+		self.entries.push(entry);
 	}
 
 	pub fn size(&self) -> usize {
