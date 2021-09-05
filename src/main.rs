@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
+use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 
 use clap::{AppSettings, Clap};
@@ -107,9 +108,13 @@ fn load_services(options: &Options) -> config::Config {
                     .replace("/", "-")
                     .to_string();
 
-                let data = fs::read_to_string(&path).expect("could not read service file");
-                let service: config::Service =
-                    serde_yaml::from_str(&data).expect("error parsing service file");
+                let data = fs::read_to_string(&path)
+                    .map_err(|e| format!("error reading service file {:?}: {}", &path, e))
+                    .unwrap();
+
+                let service: config::Service = serde_yaml::from_str(&data)
+                    .map_err(|e| format!("error parsing service file {:?}: {}", &path, e))
+                    .unwrap();
 
                 config.services.insert(service_name, service);
             }
@@ -155,16 +160,33 @@ async fn main() {
     if services.is_empty() {
         error!("no services found in {}", options.services);
     } else {
+        let mut ports: Vec<u16> = vec![];
+
         for (name, (service, service_config)) in &services {
             info!(
                 "starting {} on {} ({}) ...",
                 name, service_config.address, service_config.proto
             );
             futures.push(service.run());
+
+            let addr: SocketAddr = service_config
+                .address
+                .parse()
+                .expect("could not parse service address");
+
+            ports.push(addr.port());
         }
 
         if futures.len() > 1 {
-            info!("all services started");
+            ports.sort();
+            info!(
+                "all services started on ports: {}",
+                ports
+                    .iter()
+                    .map(|p| p.to_string())
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            );
         } else {
             info!("service started");
         }
