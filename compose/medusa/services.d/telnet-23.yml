@@ -1,0 +1,13 @@
+---
+proto: telnet
+address: "0.0.0.0:23"
+commands:
+  - parser: "^exit(\\s.+)?$"
+    handler: "@exit"
+  - parser: '^(.+)$'
+    handler: '@docker jail {$1}'  
+password_prompt: "Password : "
+login_prompt: "Login : "
+banner: "\r\nMikroTik v6.42.12 (long-term)\r\n"
+prompt: "# "
+timeout: 150

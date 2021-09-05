@@ -1,0 +1,4 @@
+---
+proto: tcp
+address: "0.0.0.0:3389"
+banner: "Remote Desktop Protocol \x03\x00\x00\x13\x0e\xd0\x00\x00\x124\x00\x03\x00\x08\x00\x02\x00\x00\x00 Windows 212 AFBA DIEU): EZR:\n"

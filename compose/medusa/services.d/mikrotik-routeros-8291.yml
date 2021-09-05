@@ -1,0 +1,4 @@
+---
+proto: tcp
+address: "0.0.0.0:8291"
+banner: "\x92\x02index\x00\x00\x00\x00\x00\x00\x01\x00\x80\x00\x00\x00\x002875093600 706177 roteros.dll 6.42.12\\n641382162 30971 advtool.dll 6.42.12\\n1289413433 38525 dhcp.dll 6.42.12\\n562577231 39332 hots"

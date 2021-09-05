@@ -1,0 +1,4 @@
+---
+proto: udp
+address: "0.0.0.0:5053"
+banner: "\nRecursion: enabled"

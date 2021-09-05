@@ -21,6 +21,8 @@ services:
       - /tmp:/tmp
       - ./compose/medusa/records:/var/lib/medusa/records
       - ./compose/medusa/services.d:/etc/medusa/services.d
+      - ./compose/medusa/medusa-https.crt:/etc/medusa/https.crt
+      - ./compose/medusa/medusa-https.key:/etc/medusa/https.key
       # medusa needs access to the docker socket in order to use the jail mechanism
       - /var/run/docker.sock:/var/run/docker.sock
 
