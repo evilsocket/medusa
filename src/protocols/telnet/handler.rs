@@ -2,7 +2,7 @@ use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 
 use tokio::{
 	io::{AsyncReadExt, AsyncWriteExt},
@@ -141,6 +141,12 @@ pub async fn handle(
 	log.log("connected".to_owned());
 
 	let rw_timeout = Duration::from_secs(config.timeout);
+
+	let mut buf = [0; 1024];
+	if let Err(e) = timeout(rw_timeout, socket.read(&mut buf)).await {
+		// not fatal
+		warn!("could not consume telnet first bytes from client: {}", e);
+	}
 
 	if !config.banner.is_empty() {
 		if let Err(e) = timeout(rw_timeout, socket.write_all(config.banner.as_bytes())).await {
