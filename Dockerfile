@@ -16,4 +16,6 @@ COPY ./src ./src
 RUN rm ./target/release/deps/medusa*
 RUN cargo build --release
 
-ENTRYPOINT ["/medusa/target/release/medusa", "--services", "/etc/medusa/services.d", "--records", "/var/lib/medusa/records"]
+FROM debian:bullseye-slim
+COPY --from=build /medusa/target/release/medusa /usr/bin/medusa
+ENTRYPOINT ["/usr/bin/medusa", "--services", "/etc/medusa/services.d", "--records", "/var/lib/medusa/records"]
