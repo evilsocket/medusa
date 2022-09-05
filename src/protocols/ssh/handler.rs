@@ -204,14 +204,8 @@ impl server::Handler for ClientHandler {
         self.finished_bool(true, session)
     }
 
-    fn channel_open_session(
-        mut self,
-        channel: ChannelId,
-        mut session: Session,
-    ) -> Self::FutureBool {
+    fn channel_open_session(mut self, _channel: ChannelId, session: Session) -> Self::FutureBool {
         self.log.log("session start".to_string());
-
-        session.data(channel, self.prompt.clone());
 
         self.finished_bool(true, session)
     }
@@ -228,8 +222,13 @@ impl server::Handler for ClientHandler {
         self.finished(session)
     }
 
-    fn shell_request(mut self, _channel: ChannelId, session: Session) -> Self::FutureUnit {
+    fn shell_request(mut self, channel: ChannelId, session: Session) -> Self::FutureUnit {
+        // see https://github.com/warp-tech/russh/issues/35
+        let mut session = session;
+
         self.log.log("shell request".to_string());
+
+        session.data(channel, self.prompt.clone());
 
         self.finished(session)
     }
