@@ -20,6 +20,7 @@ pub struct ClientHandler {
     address: std::net::SocketAddr,
     service: Arc<Mutex<Service>>,
     config: Arc<MainConfig>,
+    banner: CryptoVec,
     prompt: CryptoVec,
     line_break: CryptoVec,
     command: Vec<u8>,
@@ -38,6 +39,7 @@ impl ClientHandler {
         log.log("connected".to_owned());
 
         Self {
+            banner: CryptoVec::from_slice(config.banner.as_bytes()),
             prompt: CryptoVec::from_slice(config.prompt.as_bytes()),
             line_break: CryptoVec::from_slice(b"\r\n"),
             log,
@@ -228,6 +230,9 @@ impl server::Handler for ClientHandler {
 
         self.log.log("shell request".to_string());
 
+        session.data(channel, self.banner.clone());
+        session.data(channel, self.line_break.clone());
+        session.data(channel, self.line_break.clone());
         session.data(channel, self.prompt.clone());
 
         self.finished(session)

@@ -7,6 +7,7 @@ use russh_keys::{self, encode_pkcs8_pem, load_secret_key};
 use crate::{config::Service, protocols::Error};
 
 pub const DEFAULT_ID: &str = "SSH-2.0-OpenSSH_7.2p2 Ubuntu-4ubuntu2.10";
+pub const DEFAULT_BANNER: &str = "Last login: Mon Sep  5 14:12:09 2022 from 127.0.0.1";
 pub const DEFAULT_PROMPT: &str = "# ";
 pub const DEFAULT_KEY_FILE: &str = "/tmp/medusa-ssh.key";
 pub const DEFAULT_TIMEOUT: u64 = 10;
@@ -14,6 +15,7 @@ pub const DEFAULT_TIMEOUT: u64 = 10;
 pub fn from_service(svc: &Service) -> Config {
     let address = svc.address.to_owned();
     let server_id = svc.string("server_id", DEFAULT_ID);
+    let banner = svc.string("banner", DEFAULT_BANNER);
     let prompt = svc.string("prompt", DEFAULT_PROMPT);
     let key_file = svc.string("key", DEFAULT_KEY_FILE);
     let timeout = svc.unsigned("timeout", DEFAULT_TIMEOUT);
@@ -21,6 +23,7 @@ pub fn from_service(svc: &Service) -> Config {
     Config {
         address,
         server_id,
+        banner,
         prompt,
         key_file,
         timeout,
@@ -31,6 +34,7 @@ pub fn from_service(svc: &Service) -> Config {
 pub struct Config {
     pub address: String,
     pub server_id: String,
+    pub banner: String,
     pub prompt: String,
     pub key_file: String,
     pub timeout: u64,

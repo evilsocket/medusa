@@ -75,6 +75,7 @@ Open `/path/to/services.d/example-ssh.yml` with your favorite editor and paste t
 proto: ssh
 address: '127.0.0.1:2222'
 server_id: 'SSH-2.0-OpenSSH_7.2p2 Ubuntu-4ubuntu2.10'
+banner: 'Last login: Mon Sep  5 14:12:09 2022 from 127.0.0.1'
 prompt: '# '
 key: '/tmp/example-ssh.key'
 timeout: 15
