@@ -105,7 +105,7 @@ fn load_services(options: &Options) -> config::Config {
                     .replace(&options.services, "")
                     .trim_start_matches('/')
                     .trim_end_matches(".yml")
-                    .replace("/", "-")
+                    .replace('/', "-")
                     .to_string();
 
                 let data = fs::read_to_string(&path)

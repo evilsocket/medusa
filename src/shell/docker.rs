@@ -9,107 +9,107 @@ const DOCKER_SOCKET: &str = "/var/run/docker.sock";
 
 fn do_request<S>(request: &str, stream: &mut S) -> Result<String, String>
 where
-	S: Read + Write,
+    S: Read + Write,
 {
-	debug!("{}\n\n", request);
-	stream
-		.write_all(request.as_bytes())
-		.map_err(|e| format!("could not write to {}: {}", DOCKER_SOCKET, e))?;
+    debug!("{}\n\n", request);
+    stream
+        .write_all(request.as_bytes())
+        .map_err(|e| format!("could not write to {}: {}", DOCKER_SOCKET, e))?;
 
-	let mut response = String::new();
-	stream
-		.read_to_string(&mut response)
-		.map_err(|e| format!("could not read from {}: {}", DOCKER_SOCKET, e))?;
+    let mut response = String::new();
+    stream
+        .read_to_string(&mut response)
+        .map_err(|e| format!("could not read from {}: {}", DOCKER_SOCKET, e))?;
 
-	debug!("{}", &response);
+    debug!("{}", &response);
 
-	Ok(response)
+    Ok(response)
 }
 
 fn create_exec(container_id: &str, command: &str) -> Result<String, String> {
-	debug!(
-		"creating exec operation for container {}: {}",
-		container_id, command
-	);
+    debug!(
+        "creating exec operation for container {}: {}",
+        container_id, command
+    );
 
-	let mut stream = UnixStream::connect(DOCKER_SOCKET)
-		.map_err(|e| format!("could not connect to {}: {}", DOCKER_SOCKET, e))?;
+    let mut stream = UnixStream::connect(DOCKER_SOCKET)
+        .map_err(|e| format!("could not connect to {}: {}", DOCKER_SOCKET, e))?;
 
-	stream
-		.set_read_timeout(Some(Duration::from_secs(5)))
-		.map_err(|e| format!("could not set read timeout for {}: {}", DOCKER_SOCKET, e))?;
+    stream
+        .set_read_timeout(Some(Duration::from_secs(5)))
+        .map_err(|e| format!("could not set read timeout for {}: {}", DOCKER_SOCKET, e))?;
 
-	stream
-		.set_write_timeout(Some(Duration::from_secs(5)))
-		.map_err(|e| format!("could not set write timeout for {}: {}", DOCKER_SOCKET, e))?;
+    stream
+        .set_write_timeout(Some(Duration::from_secs(5)))
+        .map_err(|e| format!("could not set write timeout for {}: {}", DOCKER_SOCKET, e))?;
 
-	let content = format!(
-		"{{
+    let content = format!(
+        "{{
 		\"AttachStdout\": true,
 		\"Tty\": false,
 		\"Cmd\": [ \"sh\", \"-c\", {}]
 	  }}",
-		serde_json::to_string(command).unwrap()
-	);
+        serde_json::to_string(command).unwrap()
+    );
 
-	let request = format!("POST /containers/{}/exec HTTP/1.0\r\n", container_id)
-		+ "Content-Type: application/json\r\n"
-		+ &format!("Content-Length: {}\r\n", content.len())
-		+ &format!("\r\n{}", content);
+    let request = format!("POST /containers/{}/exec HTTP/1.0\r\n", container_id)
+        + "Content-Type: application/json\r\n"
+        + &format!("Content-Length: {}\r\n", content.len())
+        + &format!("\r\n{}", content);
 
-	let response = do_request(&request, &mut stream)?;
-	// split headers from response body
-	let response = format!("{{{}", response.splitn(2, '{').nth(1).unwrap());
-	// parse as generic hashmap
-	let response: HashMap<String, String> = serde_json::from_str(&response).unwrap();
-	// get exec id
-	if let Some(exec_id) = response.get("Id") {
-		debug!("exec_id = '{}'", &exec_id);
-		return Ok(exec_id.to_owned());
-	}
+    let response = do_request(&request, &mut stream)?;
+    // split headers from response body
+    let response = format!("{{{}", response.split_once('{').unwrap().1);
+    // parse as generic hashmap
+    let response: HashMap<String, String> = serde_json::from_str(&response).unwrap();
+    // get exec id
+    if let Some(exec_id) = response.get("Id") {
+        debug!("exec_id = '{}'", &exec_id);
+        return Ok(exec_id.to_owned());
+    }
 
-	Err(format!("{:?}", response))
+    Err(format!("{:?}", response))
 }
 
 fn do_exec(exec_id: &str) -> Result<String, String> {
-	debug!("dispatching exec operation {}", exec_id);
+    debug!("dispatching exec operation {}", exec_id);
 
-	let mut stream = UnixStream::connect(DOCKER_SOCKET)
-		.map_err(|e| format!("could not connect to {}: {}", DOCKER_SOCKET, e))?;
+    let mut stream = UnixStream::connect(DOCKER_SOCKET)
+        .map_err(|e| format!("could not connect to {}: {}", DOCKER_SOCKET, e))?;
 
-	stream
-		.set_read_timeout(Some(Duration::from_secs(5)))
-		.map_err(|e| format!("could not set read timeout for {}: {}", DOCKER_SOCKET, e))?;
+    stream
+        .set_read_timeout(Some(Duration::from_secs(5)))
+        .map_err(|e| format!("could not set read timeout for {}: {}", DOCKER_SOCKET, e))?;
 
-	stream
-		.set_write_timeout(Some(Duration::from_secs(5)))
-		.map_err(|e| format!("could not set write timeout for {}: {}", DOCKER_SOCKET, e))?;
+    stream
+        .set_write_timeout(Some(Duration::from_secs(5)))
+        .map_err(|e| format!("could not set write timeout for {}: {}", DOCKER_SOCKET, e))?;
 
-	let content = "{
+    let content = "{
 			\"Detach\": false,
 			\"Tty\": false
 		  }";
-	let request = format!("POST /exec/{}/start HTTP/1.0\r\n", exec_id)
-		+ "Content-Type: application/json\r\n"
-		+ &format!("Content-Length: {}\r\n", content.len())
-		+ &format!("\r\n{}", content);
+    let request = format!("POST /exec/{}/start HTTP/1.0\r\n", exec_id)
+        + "Content-Type: application/json\r\n"
+        + &format!("Content-Length: {}\r\n", content.len())
+        + &format!("\r\n{}", content);
 
-	let response = do_request(&request, &mut stream)?;
-	// split headers and response body
-	let response = response.splitn(2, "\r\n\r\n").nth(1).unwrap();
+    let response = do_request(&request, &mut stream)?;
+    // split headers and response body
+    let response = response.split_once("\r\n\r\n").unwrap().1;
 
-	Ok(response.trim().to_owned())
+    Ok(response.trim().to_owned())
 }
 
 pub fn exec(container_id: &str, command: &str) -> Result<String, String> {
-	debug!(
-		"running command '{}' inside container '{}'",
-		command, container_id
-	);
+    debug!(
+        "running command '{}' inside container '{}'",
+        command, container_id
+    );
 
-	// create exec operation
-	let exec_id = create_exec(container_id, command)?;
+    // create exec operation
+    let exec_id = create_exec(container_id, command)?;
 
-	// start exec operation by id
-	do_exec(&exec_id)
+    // start exec operation by id
+    do_exec(&exec_id)
 }
