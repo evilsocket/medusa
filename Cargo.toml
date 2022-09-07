@@ -34,7 +34,7 @@ lazy_static = "1.4.0"
 log = "0.4.14"
 regex = "1.5.4"
 reqwest = { version = "0.11.4", features = ["json"] }
-russh = "0.34.0-beta.13"
+russh = "0.34.0-beta.15"
 russh-keys = "0.22.0-beta.6"
 serde = { version = "1.0.129", features = ["derive"] }
 serde_json = "1.0.66"

@@ -3,6 +3,7 @@ use std::time::Duration;
 
 use log::{debug, info};
 use russh_keys::{self, encode_pkcs8_pem, load_secret_key};
+use russh::SshId;
 
 use crate::{config::Service, protocols::Error};
 
@@ -15,6 +16,7 @@ pub const DEFAULT_TIMEOUT: u64 = 10;
 pub fn from_service(svc: &Service) -> Config {
     let address = svc.address.to_owned();
     let server_id = svc.string("server_id", DEFAULT_ID);
+    let server_id_raw = svc.string("server_id_raw", "");
     let banner = svc.string("banner", DEFAULT_BANNER);
     let prompt = svc.string("prompt", DEFAULT_PROMPT);
     let key_file = svc.string("key", DEFAULT_KEY_FILE);
@@ -23,6 +25,7 @@ pub fn from_service(svc: &Service) -> Config {
     Config {
         address,
         server_id,
+        server_id_raw,
         banner,
         prompt,
         key_file,
@@ -34,6 +37,7 @@ pub fn from_service(svc: &Service) -> Config {
 pub struct Config {
     pub address: String,
     pub server_id: String,
+    pub server_id_raw: String,
     pub banner: String,
     pub prompt: String,
     pub key_file: String,
@@ -75,7 +79,14 @@ impl Config {
             ssh_config.keys.push(key);
         }
 
-        ssh_config.server_id = self.server_id.to_owned();
+        ssh_config.server_id = if self.server_id_raw.is_empty() {
+            SshId::Standard(self.server_id.to_owned())
+        } else {
+            SshId::Raw(self.server_id_raw.to_owned())
+        };
+
+        info!("ssh server id: {:?}", &ssh_config.server_id);
+
         ssh_config.auth_rejection_time = Duration::ZERO;
         ssh_config.methods = russh::MethodSet::NONE
             | russh::MethodSet::PASSWORD

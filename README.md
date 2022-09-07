@@ -71,10 +71,26 @@ touch /path/to/services.d/example-ssh.yml
 
 Open `/path/to/services.d/example-ssh.yml` with your favorite editor and paste these contents:
 
+
 ```yaml
 proto: ssh
 address: '127.0.0.1:2222'
 server_id: 'SSH-2.0-OpenSSH_7.2p2 Ubuntu-4ubuntu2.10'
+banner: 'Last login: Mon Sep  5 14:12:09 2022 from 127.0.0.1'
+prompt: '# '
+key: '/tmp/example-ssh.key'
+timeout: 15
+commands:
+  - parser: '^exit(\s.+)?$'
+    handler: '@exit'
+```
+
+In some cases, custom SSH servers do not respect the RFC standard for server id termination characters `\r\n`, but rather use only `\n`. In this case it is possible to use the `server_id_raw` directive and include custom terminators in the string, while of `server_id` is used the default `\r\n` will be used. 
+
+```yaml
+proto: ssh
+address: '127.0.0.1:2222'
+server_id_raw: "SSH-1.99-TECHNICOLOR_SW_2.0\n"
 banner: 'Last login: Mon Sep  5 14:12:09 2022 from 127.0.0.1'
 prompt: '# '
 key: '/tmp/example-ssh.key'
