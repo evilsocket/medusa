@@ -30,10 +30,6 @@ pub fn ssh(port_num: u64, data: &str) -> String {
         serde_yaml::to_value(server_id).unwrap(),
     );
     config.insert("prompt".to_string(), serde_yaml::to_value("# ").unwrap());
-    config.insert(
-        "key".to_string(),
-        serde_yaml::to_value(crate::protocols::ssh::config::DEFAULT_KEY_FILE).unwrap(),
-    );
     config.insert("timeout".to_string(), serde_yaml::to_value(15).unwrap());
 
     serde_yaml::to_string(&Service {

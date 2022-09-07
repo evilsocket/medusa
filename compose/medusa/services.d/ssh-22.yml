@@ -6,7 +6,6 @@ commands:
     handler: "@exit"
   - parser: '^(.+)$'
     handler: '@docker jail {$1}'
-key: /tmp/medusa-ssh.key
 server_id: SSH-2.0-ROSSSH
 prompt: "# "
 timeout: 15

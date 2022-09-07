@@ -78,7 +78,6 @@ address: '127.0.0.1:2222'
 server_id: 'SSH-2.0-OpenSSH_7.2p2 Ubuntu-4ubuntu2.10'
 banner: 'Last login: Mon Sep  5 14:12:09 2022 from 127.0.0.1'
 prompt: '# '
-key: '/tmp/example-ssh.key'
 timeout: 15
 commands:
   - parser: '^exit(\s.+)?$'
@@ -93,7 +92,6 @@ address: '127.0.0.1:2222'
 server_id_raw: "SSH-1.99-TECHNICOLOR_SW_2.0\n"
 banner: 'Last login: Mon Sep  5 14:12:09 2022 from 127.0.0.1'
 prompt: '# '
-key: '/tmp/example-ssh.key'
 timeout: 15
 commands:
   - parser: '^exit(\s.+)?$'
@@ -117,7 +115,6 @@ proto: ssh
 address: '127.0.0.1:2222'
 server_id: 'SSH-2.0-OpenSSH_7.2p2 Ubuntu-4ubuntu2.10'
 prompt: '# '
-key: '/tmp/example-ssh.key'
 timeout: 15
 commands:
   - parser: '^exit(\s.+)?$'
@@ -147,7 +144,6 @@ proto: ssh
 address: '127.0.0.1:2222'
 server_id: 'SSH-2.0-OpenSSH_7.2p2 Ubuntu-4ubuntu2.10'
 prompt: '# '
-key: '/tmp/example-ssh.key'
 timeout: 15
 commands:
   - parser: '^exit(\s.+)?$'
@@ -176,7 +172,6 @@ proto: ssh
 address: '127.0.0.1:2222'
 server_id: 'SSH-2.0-OpenSSH_7.2p2 Ubuntu-4ubuntu2.10'
 prompt: '# '
-key: '/tmp/example-ssh.key'
 timeout: 15
 commands:
   - parser: '^exit(\s.+)?$'

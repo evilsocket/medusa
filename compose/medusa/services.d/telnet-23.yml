@@ -4,6 +4,28 @@ address: "0.0.0.0:23"
 commands:
   - parser: "^exit(\\s.+)?$"
     handler: "@exit"
+  - parser: '^cat\s/proc/mounts;\s/bin/busybox\s(.+)$'
+    handler: |
+      /dev/root / ext4 rw,noatime 0 0
+      devtmpfs /dev devtmpfs rw,relatime,size=332832k,nr_inodes=83208,mode=755 0 0
+      proc /proc proc rw,relatime 0 0
+      sysfs /sys sysfs rw,nosuid,nodev,noexec,relatime 0 0
+      tmpfs /dev/shm tmpfs rw,nosuid,nodev 0 0
+      devpts /dev/pts devpts rw,nosuid,noexec,relatime,gid=5,mode=620,ptmxmode=000 0 0
+      tmpfs /run tmpfs rw,nosuid,nodev,size=186320k,nr_inodes=819200,mode=755 0 0
+      tmpfs /run/lock tmpfs rw,nosuid,nodev,noexec,relatime,size=5120k 0 0
+      cgroup2 /sys/fs/cgroup cgroup2 rw,nosuid,nodev,noexec,relatime,nsdelegate,memory_recursiveprot 0 0
+      bpf /sys/fs/bpf bpf rw,nosuid,nodev,noexec,relatime,mode=700 0 0
+      systemd-1 /proc/sys/fs/binfmt_misc autofs rw,relatime,fd=30,pgrp=1,timeout=0,minproto=5,maxproto=5,direct 0 0
+      mqueue /dev/mqueue mqueue rw,nosuid,nodev,noexec,relatime 0 0
+      sunrpc /run/rpc_pipefs rpc_pipefs rw,relatime 0 0
+      debugfs /sys/kernel/debug debugfs rw,nosuid,nodev,noexec,relatime 0 0
+      tracefs /sys/kernel/tracing tracefs rw,nosuid,nodev,noexec,relatime 0 0
+      fusectl /sys/fs/fuse/connections fusectl rw,nosuid,nodev,noexec,relatime 0 0
+      configfs /sys/kernel/config configfs rw,nosuid,nodev,noexec,relatime 0 0
+      /dev/mmcblk0p1 /boot vfat rw,relatime,fmask=0022,dmask=0022,codepage=437,iocharset=ascii,shortname=mixed,flush,errors=remount-ro 0 0
+      tmpfs /run/user/1000 tmpfs rw,nosuid,nodev,relatime,size=93156k,nr_inodes=23289,mode=700,uid=1000,gid=1000 0 0
+      {$1}: applet not found    
   - parser: '^(.+)$'
     handler: '@docker jail {$1}'  
 password_prompt: "Password : "
