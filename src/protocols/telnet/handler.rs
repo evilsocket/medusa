@@ -2,7 +2,7 @@ use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use log::{debug, error, info, warn};
+use log::{debug, error, info};
 
 use tokio::{
 	io::{AsyncReadExt, AsyncWriteExt},
@@ -140,14 +140,19 @@ pub async fn handle(
 
 	log.log("connected".to_owned());
 
-	let rw_timeout = Duration::from_secs(config.timeout);
-
-	let mut buf = [0; 1024];
+	// while standard telnet clients will send a few bytes of protocol at the beginning
+	// most malicious clients are simple tcp-connect clients, therefore they won't send 
+	// anything until a prompt is shown. Just wait for 300ms and continue wether we get
+	// something or not.
+	let rw_timeout = Duration::from_millis(300);
+	let mut buf = [0; 255];
 	if let Err(e) = timeout(rw_timeout, socket.read(&mut buf)).await {
 		// not fatal
-		warn!("could not consume telnet first bytes from client: {}", e);
+		debug!("could not consume telnet first bytes from client: {}", e);
 	}
 
+	// now use the configured timeout
+	let rw_timeout = Duration::from_secs(config.timeout);
 	if !config.banner.is_empty() {
 		if let Err(e) = timeout(rw_timeout, socket.write_all(config.banner.as_bytes())).await {
 			error!("failed to send banner to {}; err = {:?}", address, e);
