@@ -79,13 +79,14 @@ impl Config {
             ssh_config.keys.push(key);
         }
 
+        // see https://github.com/evilsocket/medusa/issues/3
         ssh_config.server_id = if self.server_id_raw.is_empty() {
             SshId::Standard(self.server_id.to_owned())
         } else {
             SshId::Raw(self.server_id_raw.to_owned())
         };
 
-        info!("ssh server id: {:?}", &ssh_config.server_id);
+        debug!("ssh server id: {:?}", &ssh_config.server_id);
 
         ssh_config.auth_rejection_time = Duration::ZERO;
         ssh_config.methods = russh::MethodSet::NONE
