@@ -6,13 +6,12 @@ use std::sync::{Arc, Mutex};
 
 use clap::{AppSettings, Clap};
 use futures::future;
-use glob::glob;
 use log::{debug, error, info};
 
 #[derive(Clap)]
 #[clap(author, about, version)]
 #[clap(setting = AppSettings::ColoredHelp)]
-struct Options {
+pub(crate) struct Options {
     /// Path containing service YAML files.
     #[clap(short, long, default_value = "services.d")]
     pub services: String,
@@ -42,13 +41,21 @@ struct Options {
     /// Enable debug verbosity.
     #[clap(long)]
     pub debug: bool,
+    /// Read records from the specified folder and print the activity.
+    #[clap(long)]
+    pub replay: bool,
 }
 
 mod config;
 mod protocols;
 mod record;
+mod replay;
+mod services;
 mod shell;
 mod shodan;
+
+#[cfg(feature = "packet_capture")]
+mod capture;
 
 fn setup() -> Options {
     let mut options: Options = Options::parse();
@@ -86,88 +93,6 @@ fn setup() -> Options {
     options
 }
 
-fn load_services(options: &Options) -> config::Config {
-    debug!("loading services from {} ...", &options.services);
-
-    let mut config = config::Config::new();
-
-    config.records.path = options.records.to_string();
-
-    if !options.only.is_empty() {
-        config.only = options
-            .only
-            .split(',')
-            .map(|s| s.trim())
-            .filter(|s| !s.is_empty())
-            .map(|s| s.parse().unwrap())
-            .collect();
-    }
-
-    for entry in glob(&format!("{}/**/*.yml", options.services)).unwrap() {
-        match entry {
-            Ok(path) => {
-                debug!("loading {}", path.display());
-
-                let service_name = path
-                    .to_str()
-                    .unwrap()
-                    .replace(&options.services, "")
-                    .trim_start_matches('/')
-                    .trim_end_matches(".yml")
-                    .replace('/', "-")
-                    .to_string();
-
-                let data = fs::read_to_string(&path)
-                    .map_err(|e| format!("error reading service file {:?}: {}", &path, e))
-                    .unwrap();
-
-                let service: config::Service = serde_yaml::from_str(&data)
-                    .map_err(|e| format!("error parsing service file {:?}: {}", &path, e))
-                    .unwrap();
-
-                config.services.insert(service_name, service);
-            }
-            Err(e) => error!("{:?}", e),
-        }
-    }
-
-    config
-}
-
-#[cfg(feature = "packet_capture")]
-fn start_packet_capture(device: &str, ports: Vec<u16>, path: PathBuf) -> Result<(), String> {
-    let filter = ports
-        .iter()
-        .map(|p| format!("port {}", p))
-        .collect::<Vec<String>>()
-        .join(" or ");
-
-    let mut cap = pcap::Capture::from_device(device)
-        .map_err(|e| format!("can't create capture object for device {}: {:?}", device, e))?
-        .immediate_mode(true)
-        .open()
-        .map_err(|e| format!("can't create capture object: {:?}", e))?;
-
-    cap.filter(&filter, true)
-        .map_err(|e| format!("can't set capture filter '{}': {:?}", &filter, e))?;
-
-    let mut savefile = cap
-        .savefile(&path)
-        .map_err(|e| format!("can't set capture file: {:?}", e))?;
-
-    tokio::spawn(async move {
-        info!("packet capture started, writing to {} ...", path.display());
-        while let Ok(packet) = cap.next_packet() {
-            savefile.write(&packet);
-            if let Err(e) = savefile.flush() {
-                error!("error flushing packet capture file: {:?}", e);
-            }
-        }
-    });
-
-    Ok(())
-}
-
 #[tokio::main(flavor = "multi_thread", worker_threads = 32)]
 async fn main() {
     let options = setup();
@@ -177,7 +102,12 @@ async fn main() {
         return;
     }
 
-    let config = load_services(&options);
+    if options.replay {
+        replay::start(&options.records).unwrap();
+        return;
+    }
+
+    let config = services::load(&options);
 
     let mut services = HashMap::new();
     let mut futures = Vec::new();
@@ -232,7 +162,7 @@ async fn main() {
             );
 
             #[cfg(feature = "packet_capture")]
-            start_packet_capture(
+            capture::start(
                 &options.capture_device,
                 ports,
                 PathBuf::from(options.records).join(options.capture),
