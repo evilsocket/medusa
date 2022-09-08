@@ -25,7 +25,7 @@ docker-compose up
 
 **NOTE:** In both examples, the host network is used. This means that the containers will bind directly to the host ports and network interface in order to be reachable from attackers. You might want to customize this setup depending on your network infrastructure.
 
-Lastly, you can build from sources if you have Rust installed in your system:
+Lastly, you can build from sources if you have Rust installed in your system (it requires `openssl`):
 
 ```sh
 cargo build 
