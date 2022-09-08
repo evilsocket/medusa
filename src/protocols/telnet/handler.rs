@@ -2,7 +2,7 @@ use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -151,7 +151,7 @@ pub async fn handle(
         debug!("could not consume telnet first bytes from client: {}", e);
     }
 
-    // now use the configured timeout
+    // now use the configured timeout, we should be able to send data
     let rw_timeout = Duration::from_secs(config.timeout);
     if !config.banner.is_empty() {
         if let Err(e) = timeout(rw_timeout, socket.write_all(config.banner.as_bytes())).await {
@@ -166,16 +166,18 @@ pub async fn handle(
     let username = match login_prompt(config.clone(), &mut socket, address, rw_timeout).await {
         Ok(username) => username,
         Err(e) => {
-            error!("{}", e);
-            return;
+            // not fatal
+            warn!("{}", e);
+            None
         }
     };
 
     let password = match password_prompt(config.clone(), &mut socket, address, rw_timeout).await {
         Ok(password) => password,
         Err(e) => {
-            error!("{}", e);
-            return;
+            // not fatal
+            warn!("{}", e);
+            None
         }
     };
 
