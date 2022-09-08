@@ -1,4 +1,0 @@
----
-proto: tcp
-address: "0.0.0.0:21"
-banner: "220 1211464 FTP server (MikroTik 6.42.12) ready\r\n"

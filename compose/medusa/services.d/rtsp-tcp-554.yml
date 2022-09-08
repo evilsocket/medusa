@@ -1,4 +1,0 @@
----
-proto: tcp
-address: "0.0.0.0:554"
-banner: "RTSP/1.0 200 OK CSeq: 1 Server: Rtsp Server Public: OPTIONS, DESCRIBE, SETUP, PLAY, RECORD, TEARDOWN, ANNOUNCE, SET_PARAMETER, GET_PARAMETER Date: Wed, 01 Sep 2021 06:12:00 GMT "

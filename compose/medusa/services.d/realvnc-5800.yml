@@ -1,9 +1,0 @@
----
-proto: http
-address: "0.0.0.0:5800"
-commands:
-  - parser: ".*"
-    handler: '<HTML> <HEAD> <TITLE> VNC viewer for Java </TITLE> </HEAD> <BODY> <APPLET CODE=vncviewer/VNCViewer.class ARCHIVE=vncviewer.jar WIDTH=400 HEIGHT=250> <PARAM name="port" value="5900"> </APPLET> </BODY> </HTML>'
-headers:
-  - "Content-Type: text/html"
-  - "Server: RealVNC/4.0"

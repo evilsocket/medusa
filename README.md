@@ -2,8 +2,6 @@
 
 A fast and secure multi protocol honeypot that can mimic realistic devices running `ssh`, `telnet`, `http`, `https` or any other `tcp` and `udp` servers. 
 
-**Work in progress.**
-
 ## Building
 
 Using Docker (recommended):
@@ -16,14 +14,6 @@ docker run \
   --network host \
   medusa
 ```
-
-You can also bring up a system that will automatically import new records on an ElasticSearch database by using `docker-compose`. All you need to do, from within the project folder, is filling the `compose/medusa/services.d` folder with your services definition YAML files (see documentation above), and then run:
-
-```sh
-docker-compose up
-```
-
-**NOTE:** In both examples, the host network is used. This means that the containers will bind directly to the host ports and network interface in order to be reachable from attackers. You might want to customize this setup depending on your network infrastructure.
 
 Lastly, you can build from sources if you have Rust installed in your system (it requires `openssl`):
 
@@ -277,6 +267,10 @@ banner: |
   Recursion: enabled
   Resolver name: X4200
 ```
+
+## Other options
+
+Run `medusa --help` for the complete list of options. 
 
 ## License
 
