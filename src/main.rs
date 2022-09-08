@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::fs;
 use std::net::SocketAddr;
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 use clap::{AppSettings, Clap};
@@ -18,6 +19,14 @@ struct Options {
     /// Record files destination path.
     #[clap(short, long, default_value = "records")]
     pub records: String,
+    /// Packet capture file name.
+    #[cfg(feature = "packet_capture")]
+    #[clap(short, long, default_value = "capture.pcap")]
+    pub capture: String,
+    /// Packet capture device name.
+    #[cfg(feature = "packet_capture")]
+    #[clap(short, long, default_value = "eth0")]
+    pub capture_device: String,
     /// Clone the network structure of a host by using shodan.io, requires --shodan-api-key
     #[clap(long)]
     pub shodan_clone: Option<String>,
@@ -125,6 +134,40 @@ fn load_services(options: &Options) -> config::Config {
     config
 }
 
+#[cfg(feature = "packet_capture")]
+fn start_packet_capture(device: &str, ports: Vec<u16>, path: PathBuf) -> Result<(), String> {
+    let filter = ports
+        .iter()
+        .map(|p| format!("port {}", p))
+        .collect::<Vec<String>>()
+        .join(" or ");
+
+    let mut cap = pcap::Capture::from_device(device)
+        .map_err(|e| format!("can't create capture object for device {}: {:?}", device, e))?
+        .immediate_mode(true)
+        .open()
+        .map_err(|e| format!("can't create capture object: {:?}", e))?;
+
+    cap.filter(&filter, true)
+        .map_err(|e| format!("can't set capture filter '{}': {:?}", &filter, e))?;
+
+    let mut savefile = cap
+        .savefile(&path)
+        .map_err(|e| format!("can't set capture file: {:?}", e))?;
+
+    tokio::spawn(async move {
+        info!("packet capture started, writing to {} ...", path.display());
+        while let Ok(packet) = cap.next_packet() {
+            savefile.write(&packet);
+            if let Err(e) = savefile.flush() {
+                error!("error flushing packet capture file: {:?}", e);
+            }
+        }
+    });
+
+    Ok(())
+}
+
 #[tokio::main(flavor = "multi_thread", worker_threads = 32)]
 async fn main() {
     let options = setup();
@@ -187,6 +230,14 @@ async fn main() {
                     .collect::<Vec<String>>()
                     .join(", ")
             );
+
+            #[cfg(feature = "packet_capture")]
+            start_packet_capture(
+                &options.capture_device,
+                ports,
+                PathBuf::from(options.records).join(options.capture),
+            )
+            .unwrap();
         } else {
             info!("service started");
         }
