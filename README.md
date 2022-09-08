@@ -91,10 +91,10 @@ commands:
 Now run:
 
 ```sh
-medusa --services "/path/to/services.d/" --records "/path/to/output/records"
+medusa --services "/path/to/services.d/" --records "/path/to/output/records" --capture-device "<your network interface name>"
 ```
 
-This will start a single honeypoint on port 2222 and all the resulting events will be saved as JSON files in the folder indicated by `--records`.
+This will start a single honeypoint on port 2222 and all the resulting events will be saved as JSON files in the folder indicated by `--records`. Additionally a pcap of the entire traffic will be saved as `capture.pcap`.
 
 ## Commands
 
