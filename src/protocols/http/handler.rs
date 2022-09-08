@@ -17,7 +17,7 @@ use crate::{
 
 use super::config::Config;
 
-fn response(code: u32, message: &str, headers: &[String], data: Option<String>) -> String {
+fn response(code: u32, message: &str, headers: &[String], data: Option<&Vec<u8>>) -> String {
     let mut resp = format!("HTTP/1.0 {} {}\r\nConnection: close\r\n", code, message);
 
     for header in headers {
@@ -27,7 +27,6 @@ fn response(code: u32, message: &str, headers: &[String], data: Option<String>) 
     if let Some(data) = data {
         write!(resp, "Content-length: {}\r\n", data.len()).unwrap();
         write!(resp, "\r\n").unwrap();
-        write!(resp, "{}", &data).unwrap();
     } else {
         write!(resp, "Content-length: 0\r\n\r\n").unwrap();
     }
@@ -64,7 +63,7 @@ pub async fn handle<S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin>(
 
         log.request(request.clone());
 
-        let mut output: Option<String> = None;
+        let mut output: Option<Vec<u8>> = None;
         {
             let mut svc = service.lock().unwrap();
             for parser in &mut svc.commands {
@@ -76,8 +75,10 @@ pub async fn handle<S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin>(
         }
 
         if let Some(output) = output {
-            let response = response(200, "OK", &config.headers, Some(output));
+            let response = response(200, "OK", &config.headers, Some(&output));
             if let Err(e) = timeout(rw_timeout, socket.write_all(response.as_bytes())).await {
+                error!("failed to send response to {}; err = {:?}", address, e);
+            } else if let Err(e) = timeout(rw_timeout, socket.write_all(&output)).await {
                 error!("failed to send response to {}; err = {:?}", address, e);
             }
         } else {

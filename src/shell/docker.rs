@@ -7,7 +7,7 @@ use log::debug;
 
 const DOCKER_SOCKET: &str = "/var/run/docker.sock";
 
-fn do_request<S>(request: &str, stream: &mut S) -> Result<String, String>
+fn do_request<S>(request: &str, stream: &mut S) -> Result<Vec<u8>, String>
 where
     S: Read + Write,
 {
@@ -16,12 +16,12 @@ where
         .write_all(request.as_bytes())
         .map_err(|e| format!("could not write to {}: {}", DOCKER_SOCKET, e))?;
 
-    let mut response = String::new();
+    let mut response = vec![];
     stream
-        .read_to_string(&mut response)
+        .read_to_end(&mut response)
         .map_err(|e| format!("could not read from {}: {}", DOCKER_SOCKET, e))?;
 
-    debug!("{}", &response);
+    debug!("{:?}", &response);
 
     Ok(response)
 }
@@ -58,6 +58,8 @@ fn create_exec(container_id: &str, command: &str) -> Result<String, String> {
         + &format!("\r\n{}", content);
 
     let response = do_request(&request, &mut stream)?;
+    let response = String::from_utf8_lossy(&response).to_string();
+
     // split headers from response body
     let response = format!("{{{}", response.split_once('{').unwrap().1);
     // parse as generic hashmap
@@ -71,7 +73,7 @@ fn create_exec(container_id: &str, command: &str) -> Result<String, String> {
     Err(format!("{:?}", response))
 }
 
-fn do_exec(exec_id: &str) -> Result<String, String> {
+fn do_exec(exec_id: &str) -> Result<Vec<u8>, String> {
     debug!("dispatching exec operation {}", exec_id);
 
     let mut stream = UnixStream::connect(DOCKER_SOCKET)
@@ -96,12 +98,17 @@ fn do_exec(exec_id: &str) -> Result<String, String> {
 
     let response = do_request(&request, &mut stream)?;
     // split headers and response body
-    let response = response.split_once("\r\n\r\n").unwrap().1;
+    let pattern = "\r\n\r\n".as_bytes();
+    let idx = response
+        .windows(pattern.len())
+        .position(|window| window == pattern)
+        .unwrap()
+        + pattern.len();
 
-    Ok(response.trim().to_owned())
+    Ok(response[idx..].to_vec())
 }
 
-pub fn exec(container_id: &str, command: &str) -> Result<String, String> {
+pub fn exec(container_id: &str, command: &str) -> Result<Vec<u8>, String> {
     debug!(
         "running command '{}' inside container '{}'",
         command, container_id

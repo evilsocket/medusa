@@ -53,7 +53,7 @@ impl ClientHandler {
     fn on_command(&mut self, command: String, channel: ChannelId, session: &mut Session) -> bool {
         self.log.command(command.clone());
 
-        let mut output: Option<String> = None;
+        let mut output: Option<Vec<u8>> = None;
 
         for parser in &mut self.service.lock().unwrap().commands {
             if let Some(out) = parser.parse(&command) {
@@ -63,11 +63,11 @@ impl ClientHandler {
         }
 
         if let Some(output) = output {
-            if output == EXIT_HANDLER_TOKEN {
+            if output == EXIT_HANDLER_TOKEN.as_bytes() {
                 return true;
             } else {
                 session.data(channel, self.line_break.clone());
-                session.data(channel, CryptoVec::from_slice(output.as_bytes()));
+                session.data(channel, CryptoVec::from_slice(&output));
             }
         } else {
             session.data(
