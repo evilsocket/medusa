@@ -15,7 +15,7 @@ docker run \
   medusa
 ```
 
-Lastly, you can build from sources if you have Rust installed in your system (it requires `openssl`):
+Lastly, you can build from sources if you have Rust installed in your system (it requires `openssl` and `libpcap-dev`):
 
 ```sh
 cargo build 
