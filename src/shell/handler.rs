@@ -77,6 +77,7 @@ impl CommandHandler {
                 let (container_id, command) = (&exec[1], &exec[2]);
                 match docker::exec(container_id, command) {
                     Ok(data) => {
+                        debug!("docker_exec('{}') -> {:?}", command, data);
                         self.cache.insert(handler, data.clone());
                         return Some(data);
                     }

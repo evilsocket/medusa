@@ -17,6 +17,10 @@ use crate::{
 
 use super::config::Config;
 
+const IAC: u8 = 255;
+const WONT: u8 = 252;
+const ECHO: u8 = 1;
+
 async fn login_prompt(
     config: Arc<Config>,
     socket: &mut tokio::net::TcpStream,
@@ -139,6 +143,16 @@ pub async fn handle(
     let mut log = record::for_address("telnet", &service_name, address);
 
     log.log("connected".to_owned());
+
+    // sending initial IAC values
+    let srv_iacs = vec![(ECHO, WONT)];
+    for (opt, cmd) in srv_iacs {
+        let buf = vec![IAC, cmd, opt];
+        if let Err(e) = socket.write_all(&buf).await {
+            error!("failed to send server IAC to {}; err = {:?}", address, e);
+            return;
+        }
+    }
 
     // while standard telnet clients will send a few bytes of protocol at the beginning
     // most malicious clients are simple tcp-connect clients, therefore they won't send

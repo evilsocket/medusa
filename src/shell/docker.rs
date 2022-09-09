@@ -36,16 +36,17 @@ fn create_exec(container_id: &str, command: &str) -> Result<String, String> {
         .map_err(|e| format!("could not connect to {}: {}", DOCKER_SOCKET, e))?;
 
     stream
-        .set_read_timeout(Some(Duration::from_secs(5)))
+        .set_read_timeout(Some(Duration::from_secs(15)))
         .map_err(|e| format!("could not set read timeout for {}: {}", DOCKER_SOCKET, e))?;
 
     stream
-        .set_write_timeout(Some(Duration::from_secs(5)))
+        .set_write_timeout(Some(Duration::from_secs(15)))
         .map_err(|e| format!("could not set write timeout for {}: {}", DOCKER_SOCKET, e))?;
 
     let content = format!(
         "{{
 		\"AttachStdout\": true,
+		\"AttachStderr\": true,
 		\"Tty\": false,
 		\"Cmd\": [ \"sh\", \"-c\", {}]
 	  }}",
@@ -80,11 +81,11 @@ fn do_exec(exec_id: &str) -> Result<Vec<u8>, String> {
         .map_err(|e| format!("could not connect to {}: {}", DOCKER_SOCKET, e))?;
 
     stream
-        .set_read_timeout(Some(Duration::from_secs(5)))
+        .set_read_timeout(Some(Duration::from_secs(15)))
         .map_err(|e| format!("could not set read timeout for {}: {}", DOCKER_SOCKET, e))?;
 
     stream
-        .set_write_timeout(Some(Duration::from_secs(5)))
+        .set_write_timeout(Some(Duration::from_secs(15)))
         .map_err(|e| format!("could not set write timeout for {}: {}", DOCKER_SOCKET, e))?;
 
     let content = "{
@@ -97,6 +98,9 @@ fn do_exec(exec_id: &str) -> Result<Vec<u8>, String> {
         + &format!("\r\n{}", content);
 
     let response = do_request(&request, &mut stream)?;
+
+    debug!("cmd response = {:?}", String::from_utf8_lossy(&response));
+
     // split headers and response body
     let pattern = "\r\n\r\n".as_bytes();
     let idx = response
@@ -109,13 +113,24 @@ fn do_exec(exec_id: &str) -> Result<Vec<u8>, String> {
 }
 
 pub fn exec(container_id: &str, command: &str) -> Result<Vec<u8>, String> {
+    // HACK: since wget and curl don't have any timeout by default, force it.
+    let command = if command.contains("wget ") {
+        debug!("patching wget command with timeout");
+        command.replace("wget ", "wget --timeout 10 ")
+    } else if command.contains("curl ") {
+        debug!("patching curl command with timeout");
+        command.replace("curl ", "curl --connect-timeout 10 ")
+    } else {
+        command.to_owned()
+    };
+
     debug!(
         "running command '{}' inside container '{}'",
-        command, container_id
+        &command, container_id
     );
 
     // create exec operation
-    let exec_id = create_exec(container_id, command)?;
+    let exec_id = create_exec(container_id, &command)?;
 
     // start exec operation by id
     do_exec(&exec_id)
